@@ -34,8 +34,8 @@ void UBaseAction::Execute()
         return;
 
     bIsActive = true;
-    TimeActive = 0.0f;
-    LastExecutionTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+    ActivationTime = GetWorld()->GetTimeSeconds(); 
+    LastExecutionTime = ActivationTime;
 
     ConsumeResources();
     ApplyGrantedTags();
@@ -48,7 +48,6 @@ void UBaseAction::Tick(float DeltaTime)
     if (!bIsActive)
         return;
 
-    TimeActive += DeltaTime;
     OnTick(DeltaTime);
 }
 
@@ -125,6 +124,7 @@ bool UBaseAction::HasRequiredResources() const
     
     return true;
 }
+
 
 float UBaseAction::GetCooldownRemaining() const
 {

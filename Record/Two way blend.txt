@@ -1,0 +1,29 @@
+언리얼 엔진 애니메이션에서 **Two-Way Blend (2방향 블렌드)**는 가장 기초적이고 직관적인 애니메이션 섞기 방식입니다. 
+주로 Blend Space 1D나 Blend 노드를 통해 구현됩니다.쉽게 말해, 두 개의 애니메이션 사이를 수치 하나(Alpha)로 왔다 갔다 하며 부드럽게 전환하는 것입니다.
+
+1. 기본 원리: 선형 보간 (Linear Interpolation)Two-Way Blend는 수학적으로 **Lerp(Linear Interpolation)**와 같습니다. 
+0에서 1 사이의 값(Alpha)을 기준으로 두 포즈를 섞습니다.
+
+Alpha = 0.0: 애니메이션 A (100%)
+Alpha = 0.5: 애니메이션 A (50%) + 애니메이션 B (50%)
+Alpha = 1.0: 애니메이션 B (100%)
+
+2. 대표적인 사용 예시: Blend Space 1D언리얼 엔진에서 Two-Way Blend가 가장 많이 쓰이는 곳은 Blend Space 1D입니다.
+
+상황: 캐릭터가 정지 상태(Idle)에서 걷기(Walk)로 가속할 때.
+
+축(Parameter): 
+Speed (속도)작동 방식:속도가 0일 때: Idle 애니메이션 
+재생.속도가 150일 때: Idle과 Walk가 반반씩 섞임.
+속도가 300일 때: Walk 애니메이션 완전 재생.
+이 과정을 통해 캐릭터는 발이 미끄러지거나 끊기는 느낌 없이 자연스럽게 서 있다가 걷게 됩니다.
+
+3. 언리얼 엔진 AnimGraph에서의 사용애님 그래프(AnimGraph) 내에서는 Blend 노드를 사용하여 직접 구현하기도 합니다.
+노드 이름: Blend (입력 핀 A, B, Alpha)용도: 특정 조건에 따라 두 상태를 부드럽게 전환하고 싶을 때.예: 평상시 대기 모션(A) $\leftrightarrow$ 전투 태세 대기 모션(B)변수 IsCombatMode가 켜지면 Alpha 값을 서서히 올려 A에서 B로 전환.
+
+4. Additive(지난 질문)와의 차이점Additive (지난 질문): 기준 포즈에 "변화량(Delta)"을 더하는 것. (예: 달리기 + 피격 반동)
+Two-Way Blend (이번 질문): 두 애니메이션의 "비중(Weight)"을 조절하여 섞는 것. (예: 걷기 $\leftrightarrow$ 달리기)요약개념: 두 애니메이션(A, B)을 0~1 사이의 값으로 섞는 것.
+
+핵심 도구: Blend Space 1D, Blend Node.
+
+주요 용도: Idle $\leftrightarrow$ Walk, Walk $\leftrightarrow$ Run 처럼 동작이 서서히 변할 때.

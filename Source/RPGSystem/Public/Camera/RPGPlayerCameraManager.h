@@ -583,13 +583,12 @@ public:
     // =================================================================
 
     bool IsYawMovementFollowEnabled() const;
-
+	bool IsPitchMovementFollowEnabled() const;
+	UFUNCTION(BlueprintCallable, Category = "Camera Manager")
     void SetYawMovementFollowSettings(const FCameraYawFollowSettings& InSettings);
-
+	UFUNCTION(BlueprintCallable, Category = "Camera Manager")
     void SetPitchMovementFollowSettings(const FCameraPitchFollowSettings& InSettings);
-
-    bool IsPitchMovementFollowEnabled() const;
-
+	UFUNCTION(BlueprintCallable, Category = "Camera Manager")
     void ToggleYawAndPitchFollow(bool bEnableYaw, bool bEnablePitch, bool bTriggerPitchFollowWhenFalling,bool bTriggerPitchFollowOnSlopes);
 
     // =================================================================
@@ -597,7 +596,6 @@ public:
     // =================================================================
 
     void SetPitchConstraints(const FCameraPitchConstraintSettings& InSettings);
-
     void SetYawConstraints(const FCameraYawConstraintSettings& InSettings);
 
     // =================================================================
@@ -605,9 +603,9 @@ public:
     // =================================================================
 
     void SetCameraFocusSettings(const FRPGCameraFocusSettings& InSettings);
-
+	UFUNCTION(BlueprintCallable)
     void ToggleCameraFocus(bool bEnable);
-
+	UFUNCTION(BlueprintCallable)
 	URPGFocusTargetMethod* SetCameraFocusTargetingMethod(TSubclassOf<URPGFocusTargetMethod> MethodClass);
 
     bool IsFocusEnabledInCurrentData() const;

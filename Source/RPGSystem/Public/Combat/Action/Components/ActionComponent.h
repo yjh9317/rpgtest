@@ -7,6 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "ActionComponent.generated.h"
 
+class UDataAsset_ActionConfig;
 class UBaseAction;
 class ABaseCharacter;
 
@@ -23,15 +24,18 @@ public:
     
 protected:
     // === 액션 데이터 ===
-    UPROPERTY(EditDefaultsOnly, Category = "Actions", meta = (DisplayName = "Default Actions"))
-    TMap<FGameplayTag, TSubclassOf<UBaseAction>> ActionClasses;
+    UPROPERTY(EditDefaultsOnly, Category = "Action")
+    TObjectPtr<UDataAsset_ActionConfig> DefaultActionSet;
 
     UPROPERTY(BlueprintReadOnly, Category = "Action State")
     TMap<FGameplayTag, UBaseAction*> ActionInstances;
 
     UPROPERTY(BlueprintReadOnly, Category = "Action State")
     TArray<UBaseAction*> ActiveActions;
-
+    
+    UPROPERTY(Transient)
+    TArray<UBaseAction*> TickingActions;
+    
     // === 태그 시스템 ===
     UPROPERTY(BlueprintReadOnly, Category = "Tags")
     FGameplayTagContainer ActiveTags;
@@ -46,7 +50,6 @@ public:
     void RegisterAction(const FGameplayTag& ActionTag, TSubclassOf<UBaseAction> ActionClass);
     void UnregisterAction(const FGameplayTag& ActionTag);
     UBaseAction* GetAction(const FGameplayTag& ActionTag) const;
-    UBaseAction* CreateActionInstance(const FGameplayTag& ActionTag);
 
     // === Action 실행 ===
     bool ExecuteAction(const FGameplayTag& ActionTag);
@@ -66,7 +69,6 @@ public:
 
     // === 쿼리 ===
     bool IsActionActive(const FGameplayTag& ActionTag) const;
-    bool IsActionRegistered(const FGameplayTag& ActionTag) const { return ActionClasses.Contains(ActionTag); }
     TArray<UBaseAction*> GetActiveActions() const { return ActiveActions; }
     TArray<FGameplayTag> GetRegisteredActionTags() const;
     TArray<UBaseAction*> GetActionsByCategory(const FGameplayTag& CategoryTag) const;

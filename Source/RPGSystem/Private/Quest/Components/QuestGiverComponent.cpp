@@ -52,11 +52,6 @@ void UQuestGiverComponent::LateBeginPlay()
 	BindFunctionsToQuestDelegates();
 }
 
-void UQuestGiverComponent::TickComponent(float DeltaTime, ELevelTick TickType,
-	FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-}
 
 void UQuestGiverComponent::OnQuestStateChangedWrapper(URPGQuest* QuestUpdate, EQuestState QuestState)
 {

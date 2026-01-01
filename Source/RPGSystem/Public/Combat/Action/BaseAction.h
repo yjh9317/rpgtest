@@ -14,7 +14,7 @@ class UActionComponent;
 
 DECLARE_DELEGATE_OneParam(FOnActionEnded, UBaseAction*);
 
-UCLASS()
+UCLASS(Blueprintable,BlueprintType)
 class RPGSYSTEM_API UBaseAction : public UObject
 {
 	GENERATED_BODY()
@@ -54,6 +54,9 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Conditions")
 	bool bCanExecuteInAir = false;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Action")
+	bool bWantsTick = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Conditions")
 	bool bInterruptible = false;
@@ -71,7 +74,7 @@ protected:
 	TObjectPtr<UObject> SourceObject;
 
 	bool bIsActive = false;
-	float TimeActive = 0.0f;
+	float ActivationTime = 0.0f;
 	float LastExecutionTime = -999.0f;
 
 public:
@@ -79,7 +82,9 @@ public:
 	virtual bool ProcessInput() { return false; }
 	void Execute();
     void Tick(float DeltaTime);
+	UFUNCTION(BlueprintCallable, Category = "Action")
     void Interrupt();
+	UFUNCTION(BlueprintCallable, Category = "Action")
 	void Complete();
 
     UFUNCTION(BlueprintPure, Category = "Action")
@@ -91,8 +96,12 @@ public:
     UFUNCTION(BlueprintPure, Category = "Action")
     bool IsActive() const { return bIsActive; }
 
-    UFUNCTION(BlueprintPure, Category = "Action")
-    float GetTimeActive() const { return TimeActive; }
+	UFUNCTION(BlueprintPure, Category = "Action")
+	float GetTimeActive() const
+    {
+    	if (!bIsActive) return 0.0f;
+    	return GetWorld()->GetTimeSeconds() - ActivationTime;
+    }
 
     UFUNCTION(BlueprintPure, Category = "Action")
     float GetCooldownRemaining() const;
@@ -106,6 +115,9 @@ public:
     UFUNCTION(BlueprintPure, Category = "Action")
     APlayerController* GetOwnerController() const;
 
+	// UFUNCTION()
+	// virtual void OnGameEvent(FGameplayTag EventTag, const FRPGEventData& EventData);
+	// virtual void HandleGameEvent(FGameplayTag EventTag, const FRPGEventData& EventData) {}
 protected:
     virtual void ConsumeResources();
     virtual void RefundResources(float Percentage = 1.0f);
@@ -114,11 +126,25 @@ protected:
 
 
 #pragma region InternalFunction
-    virtual void OnInitialized(){};
-    virtual void OnExecute(){};
-    virtual void OnTick(float DeltaTime){};
-    virtual void OnInterrupt(){};
-    virtual void OnComplete() {};
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
+	void OnInitialized();
+	virtual void OnInitialized_Implementation() {} 
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
+	void OnExecute();
+	virtual void OnExecute_Implementation() {} 
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
+	void OnTick(float DeltaTime);
+	virtual void OnTick_Implementation(float DeltaTime) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
+	void OnInterrupt();
+	virtual void OnInterrupt_Implementation() {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
+	void OnComplete();
+	virtual void OnComplete_Implementation() {}
 #pragma endregion
 	
 	virtual void StartCooldown();

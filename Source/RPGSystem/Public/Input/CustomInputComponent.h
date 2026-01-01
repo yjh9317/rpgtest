@@ -17,6 +17,9 @@ public:
 	// 태그를 기반으로 네이티브 함수 바인딩 (템플릿 함수)
 	template<class UserClass, typename FuncType>
 	void BindNativeAction(const UDataAsset_InputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func, bool bLogIfNotFound = true);
+	
+	template<class UserClass, typename FuncType>
+	void BindAbilityActions(const UDataAsset_InputConfig* InputConfig, UserClass* Object, FuncType Func);
 };
 
 template<class UserClass, typename FuncType>
@@ -26,5 +29,19 @@ void UCustomInputComponent::BindNativeAction(const UDataAsset_InputConfig* Input
 	if (const UInputAction* IA = InputConfig->FindNativeInputActionForTag(InputTag, bLogIfNotFound))
 	{
 		BindAction(IA, TriggerEvent, Object, Func);
+	}
+}
+
+template<class UserClass, typename FuncType>
+void UCustomInputComponent::BindAbilityActions(const UDataAsset_InputConfig* InputConfig, UserClass* Object, FuncType Func)
+{
+	check(InputConfig);
+
+	for (const FAbilityInputConfig& AbilityConfig : InputConfig->AbilityInputActions)
+	{
+		if (AbilityConfig.InputAction && AbilityConfig.ActionTag.IsValid())
+		{
+			BindAction(AbilityConfig.InputAction, AbilityConfig.TriggerEvent, Object, Func, AbilityConfig.ActionTag);
+		}
 	}
 }

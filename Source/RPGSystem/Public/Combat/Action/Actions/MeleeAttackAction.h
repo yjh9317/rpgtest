@@ -3,7 +3,6 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Combat/Action/ActionEventHandler.h"
 #include "Combat/Action/Actions/BaseAttackAction.h"
 #include "MeleeAttackAction.generated.h"
 
@@ -38,7 +37,7 @@ struct FMeleeAttackData
 
 
 UCLASS()
-class RPGSYSTEM_API UMeleeAttackAction : public UBaseAttackAction, public IActionEventHandler
+class RPGSYSTEM_API UMeleeAttackAction : public UBaseAttackAction
 {
     GENERATED_BODY()
 
@@ -94,9 +93,10 @@ public:
 protected:
     virtual void Initialize(AActor* NewActionOwner, UObject* NewSourceObject = nullptr) override;
     virtual bool CanExecute() const override;
-    virtual void OnExecute() override;
-    virtual void OnComplete() override;
-    virtual void OnInterrupt() override;
+	
+	virtual void OnExecute_Implementation() override;
+	virtual void OnComplete_Implementation() override;
+	virtual void OnInterrupt_Implementation() override;
 
 
 	
@@ -112,8 +112,5 @@ protected:
     bool ValidateExecution() const;
     float GetStaminaCostForCombo() const;
 
-
-    virtual void HandleActionEvent(EActionEvent EventType, float Value) override;
-    virtual bool CanHandleActionEvent(EActionEvent EventType) const override;
 	
 };

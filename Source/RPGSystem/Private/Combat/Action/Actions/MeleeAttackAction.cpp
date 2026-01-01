@@ -38,7 +38,7 @@ bool UMeleeAttackAction::CanExecute() const
     return Super::CanExecute();
 }
 
-void UMeleeAttackAction::OnExecute()
+void UMeleeAttackAction::OnExecute_Implementation()
 {
     if (!ValidateExecution())
     {
@@ -48,6 +48,25 @@ void UMeleeAttackAction::OnExecute()
 
     LastAttackTime = GetWorld()->GetTimeSeconds();
     PerformAttack();
+}
+
+void UMeleeAttackAction::OnComplete_Implementation()
+{
+    // 콤보 이어갈 수 있으면 바로 끝내지 않도록 하는 로직은
+    // 필요에 따라 유지/삭제
+    if (bComboWindowOpen && CurrentComboIndex < MeleeData.ComboMontages.Num() - 1)
+    {
+        return;
+    }
+
+    ResetCombo();
+    Super::OnComplete();
+}
+
+void UMeleeAttackAction::OnInterrupt_Implementation()
+{
+    ResetCombo();
+    Super::OnInterrupt();
 }
 
 bool UMeleeAttackAction::TryProcessComboInput()
@@ -164,26 +183,6 @@ void UMeleeAttackAction::ResetCombo()
     AlreadyHitActors.Empty();
 }
 
-void UMeleeAttackAction::OnComplete()
-{
-    // 콤보 이어갈 수 있으면 바로 끝내지 않도록 하는 로직은
-    // 필요에 따라 유지/삭제
-    if (bComboWindowOpen && CurrentComboIndex < MeleeData.ComboMontages.Num() - 1)
-    {
-        return;
-    }
-
-    ResetCombo();
-    Super::OnComplete();
-}
-
-void UMeleeAttackAction::OnInterrupt()
-{
-    ResetCombo();
-    // 피격 인터럽트 등에서는 CancelToMovement를 안 부를 수도 있음
-    Super::OnInterrupt();
-}
-
 bool UMeleeAttackAction::ProcessInput()
 {
     return TryProcessComboInput();
@@ -203,25 +202,3 @@ float UMeleeAttackAction::GetStaminaCostForCombo() const
     return BaseStaminaCost * ComboMultiplier;
 }
 
-void UMeleeAttackAction::HandleActionEvent(EActionEvent EventType, float Value)
-{
-    switch (EventType)
-    {
-    case EActionEvent::Active:      // 예: Anim Notify에서 호출
-        ApplyAttackToCurrentTarget();
-        break;
-
-    case EActionEvent::Finished:
-        bComboWindowOpen = false;
-        OnComplete();
-        break;
-
-    default:
-        break;
-    }
-}
-
-bool UMeleeAttackAction::CanHandleActionEvent(EActionEvent EventType) const
-{
-    return true;
-}

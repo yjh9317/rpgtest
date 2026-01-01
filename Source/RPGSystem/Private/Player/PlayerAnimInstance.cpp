@@ -44,161 +44,103 @@ void UPlayerAnimInstance::NativeInitializeAnimation()
 
 void UPlayerAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
 {
-	Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
+    Super::NativeThreadSafeUpdateAnimation(DeltaSeconds);
 
-	if (!Character || !CharacterMovement)
-	{
-		return;
-	}
-	
-	if (MainAnimInstance.IsValid() && MainAnimInstance.Get() != this)
-	{
-		UPlayerAnimInstance* MainInst = MainAnimInstance.Get();
+    if (!Character || !CharacterMovement)
+    {
+       return;
+    }
+    
+    // [Linked Anim Layer 처리]
+    if (MainAnimInstance.IsValid() && MainAnimInstance.Get() != this)
+    {
+       UPlayerAnimInstance* MainInst = MainAnimInstance.Get();
+       this->LocomotionData = MainInst->LocomotionData;
+       this->CombatData     = MainInst->CombatData;
+       return;
+    }
 
-		this->Velocity = MainInst->Velocity;
-		this->GroundSpeed = MainInst->GroundSpeed;
-		this->bShouldMove = MainInst->bShouldMove;
-		this->bIsFalling = MainInst->bIsFalling;
-		this->LocomotionDirection = MainInst->LocomotionDirection;
-		this->LastLocomotionDirection = MainInst->LastLocomotionDirection;
-		this->AimOffset = MainInst->AimOffset;
+    // -------------------------------------------------------------------------
+    // [Case 2] Main Anim Instance 로직
+    // -------------------------------------------------------------------------
+    
+    // [중요] 상태값을 먼저 가져옵니다. (방향 계산에 쓰기 위해 위로 올림)
+    bool bCurrentAiming = false;
+    if (RPGCharacter)
+    {
+        bCurrentAiming = RPGCharacter->IsAiming();
         
-		this->OverlayState = MainInst->OverlayState;
-		this->WeaponStyle = MainInst->WeaponStyle;
+        // 나머지 상태들도 미리 업데이트
+        LocomotionData.bIsSprint  = RPGCharacter->IsSprint();
+        LocomotionData.bIsCrouch  = RPGCharacter->IsCrouch();
+        LocomotionData.bIsWalking = RPGCharacter->IsWalking();
+        
+        CombatData.bIsInCombat = RPGCharacter->IsInCombat();
+        CombatData.bIsAiming = bCurrentAiming; // 미리 저장
+        CombatData.bIsGuarding = RPGCharacter->IsGuarding();
+        CombatData.bIsPrimaryDown = RPGCharacter->IsPrimaryDown();
+        CombatData.AimOffset = RPGCharacter->GetBaseAimRotation() - RPGCharacter->GetActorRotation();
+    }
 
-		this->WorldLocation = MainInst->WorldLocation;
-		this->WorldRotation = MainInst->WorldRotation;
-		this->LandingImpactSpeed = MainInst->LandingImpactSpeed;
-		// Linked Layer는 여기서 업데이트 종료 (자체 계산 스킵)
-		return;
-	}
+    // 1. 기본 이동 데이터 계산
+    LocomotionData.WorldLocation = Character->GetActorLocation();
+    LocomotionData.WorldRotation = Character->GetActorRotation();
+    LocomotionData.Velocity = CharacterMovement->Velocity;
+    LocomotionData.GroundSpeed = LocomotionData.Velocity.Size2D();
+    LocomotionData.bHasAcceleration = (CharacterMovement->GetCurrentAcceleration().SizeSquared2D() > 0.0f);
+    
+    // Should Move 판단
+    LocomotionData.bShouldMove = (LocomotionData.GroundSpeed > 3.0f && LocomotionData.bHasAcceleration);
 
-	// 1. 기본 데이터 업데이트
-	Velocity = CharacterMovement->Velocity;
-	GroundSpeed = Velocity.Size2D();
-	
-	// 가속도 확인
-	FVector CurrentAcceleration = CharacterMovement->GetCurrentAcceleration();
-	bHasAcceleration = CurrentAcceleration.SizeSquared() > 0.0f;
-	bShouldMove = (GroundSpeed > 0.1f) && bHasAcceleration;
-	
-	bIsFalling = CharacterMovement->IsFalling();
-	IsJumping = bIsFalling && (Velocity.Z > 0.0f); // 간단한 판별
-	IsOnGround = !bIsFalling;
-	IsCrouching = CharacterMovement->IsCrouching();
+    // Falling 상태 처리
+    LocomotionData.bIsFalling = CharacterMovement->IsFalling();
+    if (LocomotionData.bIsFalling)
+    {
+       CurrentFallingSpeed = LocomotionData.Velocity.Z; 
+    }
+    else if (bWasFalling)
+    {
+       LocomotionData.LandingImpactSpeed = FMath::Abs(CurrentFallingSpeed);
+    }
+    bWasFalling = LocomotionData.bIsFalling;
 
-	// 2. 방향(Direction) 및 로컬 속도 계산
-	FRotator ActorRot = Character->GetActorRotation();
-	LocomotionDirection = UKismetAnimationLibrary::CalculateDirection(Velocity, ActorRot);
-	
-	if (GroundSpeed > 1.0f) // 아주 느릴 때는 갱신 안 함 (노이즈 방지)
-	{
-		LastLocomotionDirection = LocomotionDirection;
-	}
-	// Backward 판별 로직
-	float AbsAngle = FMath::Abs(LocomotionDirection);
-	if (bIsMovingBackward)
-	{
-		if (AbsAngle <= 100.0f) bIsMovingBackward = false;
-	}
-	else
-	{
-		if (AbsAngle > 110.0f) bIsMovingBackward = true;
-	}
-	
-	// AimOffset 계산
-	FRotator ControlRot = Character->GetControlRotation();
-	FRotator DeltaRot = UKismetMathLibrary::NormalizedDeltaRotator(ControlRot, ActorRot);
-	AimOffset = DeltaRot;
+    // =========================================================
+    // [핵심 변경 구간] 방향 및 워핑 계산 (LocomotionDirection)
+    // =========================================================
+    if (LocomotionData.bShouldMove)
+    {
+       LocomotionData.LastLocomotionDirection = LocomotionData.LocomotionDirection;
+       
+       // (A) 조준(Aiming) 중: 스트레이프 모드
+       // 실제 이동 방향과 몸(카메라) 각도 차이를 계산 -> BlendSpace (-180 ~ 180) 적용
+       if (bCurrentAiming)
+       {
+           FRotator VelocityRot = LocomotionData.Velocity.ToOrientationRotator();
+           LocomotionData.LocomotionDirection = UKismetMathLibrary::NormalizedDeltaRotator(VelocityRot, Character->GetActorRotation()).Yaw;
+       }
+       // (B) 탐험(Exploration) 중: 오리엔트 모드
+       // 캐릭터가 물리적으로 회전하므로, 다리는 '앞(0)'으로 고정 -> 자연스럽게 회전하며 달림
+       else
+       {
+           // 0으로 바로 꽂아도 되지만, Aim -> NotAim 전환 시 부드럽게 풀리도록 보간
+           LocomotionData.LocomotionDirection = FMath::FInterpTo(LocomotionData.LocomotionDirection, 0.0f, DeltaSeconds, 5.0f);
+       }
+    }
+    else
+    {
+        // 멈춰있을 땐 방향 0 (혹은 이전 값 유지)
+        LocomotionData.LocomotionDirection = 0.0f; 
+    }
+    
+    // 후진 판단
+    LocomotionData.bIsMovingBackward = (FMath::Abs(LocomotionData.LocomotionDirection) > 130.0f);
 
-	// =========================================================================
-	// Debugger 변수 업데이트 (계산 로직 추가)
-	// =========================================================================
-	
-	// Location & Rotation
-	WorldLocation = Character->GetActorLocation();
-	WorldRotation = ActorRot;
-	DisplacementSpeed = GroundSpeed;
-
-	// Yaw Delta Speed (회전 속도)
-	float YawDelta = UKismetMathLibrary::NormalizedDeltaRotator(ActorRot, PreviousRotation).Yaw;
-	if (DeltaSeconds > 0.0f)
-	{
-		YawDeltaSpeed = YawDelta / DeltaSeconds;
-	}
-	PreviousRotation = ActorRot;
-
-	// Velocity Data
-	WorldVelocity = Velocity;
-	HasVelocity = GroundSpeed > 0.1f;
-
-	// Local Velocity (액터 기준 속도)
-	FVector UnrotatedVelocity = ActorRot.UnrotateVector(Velocity);
-	LocalVelocity2D = FVector(UnrotatedVelocity.X, UnrotatedVelocity.Y, 0.0f);
-	
-	LocalVelocityDirectionAngle = LocomotionDirection;
-	LocalVelocityDirectionAngleWithOffset = LocomotionDirection; // 오프셋 로직이 있다면 여기에 적용
-	
-	LocalVelocityDirection = CalculateCardinalDirection(LocomotionDirection);
-	LocalVelocityDirectionNoOffset = LocalVelocityDirection;
-
-	// Acceleration Data
-	FVector UnrotatedAccel = ActorRot.UnrotateVector(CurrentAcceleration);
-	LocalAcceleration2D = FVector(UnrotatedAccel.X, UnrotatedAccel.Y, 0.0f);
-	
-	// 가속도 기반 방향
-	float AccelAngle = UKismetAnimationLibrary::CalculateDirection(CurrentAcceleration, ActorRot);
-	CardinalDirectionFromAcceleration = CalculateCardinalDirection(AccelAngle);
-
-	// Pivot (급격한 방향 전환 시 사용, 예시 로직)
-	PivotDirection2D = FVector::ZeroVector; 
-	if (bShouldMove && FVector::DotProduct(Velocity.GetSafeNormal(), CurrentAcceleration.GetSafeNormal()) < -0.5f)
-	{
-		PivotDirection2D = LocalAcceleration2D.GetSafeNormal();
-	}
-	
-	IsRunningIntoWall = false;
-	TimeFalling = 0.0f; // CharacterMovement->GetTimeFalling() 등의 접근 필요하나 ThreadSafe에선 제한될 수 있음
-	
-	// Ground Distance (LineTrace 필요하나 ThreadSafe에선 제한적, 캡슐 하단 기준 근사치)
-	GroundDistance = 0.0f; 
-
-	// Aiming
-	AimPitch = AimOffset.Pitch;
-	AimYaw = AimOffset.Yaw;
-	
-	if (bIsFalling)
-	{
-		CurrentFallingSpeed = -Velocity.Z; 
-	}
-
-	if (!bIsFalling && bWasFalling)
-	{
-		LandingImpactSpeed = CurrentFallingSpeed;
-	}
-
-	bWasFalling = bIsFalling;
-	
-	if (RPGCharacter)
-	{
-		bIsPrimaryDown = RPGCharacter->IsPrimaryDown();
-		
-		bIsAiming = RPGCharacter->IsAiming();
-		bIsBowReady = RPGCharacter->IsBowReady();
-        bIsInCombat = RPGCharacter->IsInCombat();
-		bIsGuarding = RPGCharacter->IsGuarding();
-		
-		
-		float TargetAimAlpha = bIsAiming ? 1.0f : 0.0f;
-		AimBlendWeight = FMath::FInterpTo(AimBlendWeight, TargetAimAlpha, DeltaSeconds, AimBlendSpeed);
-		
-		float TargetPrimaryAlpha = bIsPrimaryDown ? 1.0f : 0.0f;
-		PrimaryBlendWeight = FMath::FInterpTo(PrimaryBlendWeight, TargetPrimaryAlpha, DeltaSeconds, PrimaryBlendSpeed);
-		
-		float TargetGuardAlpha = bIsGuarding ? 1.0f : 0.0f;
-		GuardBlendWeight = FMath::FInterpTo(GuardBlendWeight, TargetPrimaryAlpha, DeltaSeconds, GuardBlendSpeed);
-	}
+    // 블렌드 웨이트 계산
+    CombatData.AimBlendWeight = FMath::FInterpTo(CombatData.AimBlendWeight, CombatData.bIsAiming ? 1.0f : 0.0f, DeltaSeconds, AimBlendSpeed);
+    CombatData.PrimaryBlendWeight = FMath::FInterpTo(CombatData.PrimaryBlendWeight, CombatData.bIsPrimaryDown ? 1.0f : 0.0f, DeltaSeconds, PrimaryBlendSpeed);
+    CombatData.GuardBlendWeight = FMath::FInterpTo(CombatData.GuardBlendWeight, CombatData.bIsGuarding ? 1.0f : 0.0f, DeltaSeconds, GuardBlendSpeed);
 }
+
 
 ECardinalDirection UPlayerAnimInstance::CalculateCardinalDirection(float Angle) const
 {
@@ -220,7 +162,7 @@ void UPlayerAnimInstance::OnEquipmentUpdated(FGameplayTag SlotTag, const UItemIn
 void UPlayerAnimInstance::DetermineOverlayState(const UItemInstance* ItemInstance)
 {
 	// 1. 일단 기본 상태로 초기화 (아이템이 없거나 매칭 안 되면 Default)
-	OverlayState = ECharacterOverlayState::Default;
+	CombatData.OverlayState = ECharacterOverlayState::Default;
 
 	if (!ItemInstance || !ItemInstance->GetItemDef())
 	{
@@ -233,7 +175,7 @@ void UPlayerAnimInstance::DetermineOverlayState(const UItemInstance* ItemInstanc
 	{
 		if (ItemDef->HasTag(Pair.Key))
 		{
-			OverlayState = Pair.Value;
+			CombatData.OverlayState = Pair.Value;
 		}
 	}
 	

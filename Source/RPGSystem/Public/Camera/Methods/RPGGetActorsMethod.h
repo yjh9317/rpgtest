@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable,BlueprintType,EditInlineNew)
 class RPGSYSTEM_API URPGGetActorsMethod : public UObject
 {
 	GENERATED_BODY()

@@ -19,6 +19,99 @@ enum class ECharacterOverlayState : uint8
 	Magician	UMETA(DisplayName = "Magician")
 };
 
+USTRUCT(BlueprintType)
+struct FRPGAnimLocomotionData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector Velocity = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float GroundSpeed = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bShouldMove = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bHasAcceleration = false;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsSprint = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsCrouch = false; 
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsWalking = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsFalling = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float LandingImpactSpeed = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsMovingBackward = false;
+
+	// 워핑 및 방향
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float LocomotionDirection = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float LastLocomotionDirection = 0.0f;
+
+	// 월드 정보 (디버깅/매칭용)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector WorldLocation = FVector::ZeroVector;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FRotator WorldRotation = FRotator::ZeroRotator;
+};
+
+// ---------------------------------------------------------
+// 2. 전투 관련 데이터 (Combat Data)
+// ---------------------------------------------------------
+USTRUCT(BlueprintType)
+struct FRPGAnimCombatData
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	ECharacterOverlayState OverlayState = ECharacterOverlayState::Default;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	int32 WeaponStyle = 0;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FRotator AimOffset = FRotator::ZeroRotator;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsInCombat = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsGuarding = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsAiming = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsBowReady = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bIsPrimaryDown = false;
+
+	// 블렌딩 가중치
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float AimBlendWeight = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float PrimaryBlendWeight = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	float GuardBlendWeight = 0.0f;
+};
+
 class UCharacterMovementComponent;
 class ULocomotionComponent;
 class UAnimSequence;
@@ -38,12 +131,10 @@ protected:
 	UFUNCTION()
 	void OnEquipmentUpdated(FGameplayTag SlotTag, const UItemInstance* ItemInstance);
 	void DetermineOverlayState(const UItemInstance* ItemInstance);
-
-	// 헬퍼 함수: 로컬 속도 방향 계산
 	ECardinalDirection CalculateCardinalDirection(float Angle) const;
 
 protected:
-	// 무기용 AnimInstance, 
+	// 메인 인스턴스 참조 (Linked Anim Layer일 때 사용)
 	UPROPERTY(Transient, BlueprintReadOnly, Category = "References")
 	TWeakObjectPtr<UPlayerAnimInstance> MainAnimInstance;
 	
@@ -56,181 +147,38 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "References")
 	TObjectPtr<class UCharacterMovementComponent> CharacterMovement;
 
-	// --- 기본 이동 데이터 ---
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	FVector Velocity;
+	// =========================================================
+	// [수정] 구조체 변수 선언 (개별 변수 삭제됨)
+	// =========================================================
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RPG|Locomotion")
+	FRPGAnimLocomotionData LocomotionData;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	float GroundSpeed;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "RPG|Combat")
+	FRPGAnimCombatData CombatData;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	bool bShouldMove;
+	// =========================================================
+	// 설정값 및 내부 계산용 변수 (동기화 불필요)
+	// =========================================================
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Movement|Config")
+	float GroundSpeedInterpSpeed = 20.f;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	bool bIsFalling; 
-	
-	bool bWasFalling = false;
+	UPROPERTY(EditDefaultsOnly, Category = "Movement|Config")
+	float StopSpeed = 600.f;
 
-	float CurrentFallingSpeed = 0.0f;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Movement|Landing")
-	float LandingImpactSpeed = 0.0f;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	bool bIsMovingBackward;
-
-	// --- 워핑 데이터 ---
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	float LocomotionDirection;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Movement")
-	float LastLocomotionDirection;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	FRotator AimOffset;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "State")
-	ECharacterOverlayState OverlayState;
-	
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Config")
-	TMap<FGameplayTag, ECharacterOverlayState> WeaponTagToStateMap;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
-	int WeaponStyle = 0;
-
-	// =========================================================================
-	// SLocomotionDebugger 지원 변수 (Debugger가 Reflection으로 접근)
-	// =========================================================================
-	
-	// Location
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Location")
-	FVector WorldLocation;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Location")
-	float DisplacementSpeed;
-
-	// Rotation
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Rotation")
-	FRotator WorldRotation;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Rotation")
-	float YawDeltaSpeed;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Rotation")
-	float AdditiveLeanAngle;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Rotation")
-	float RootYawOffset;
-
-	// Velocity
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	FVector WorldVelocity;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	FVector LocalVelocity2D;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	float LocalVelocityDirectionAngle;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	float LocalVelocityDirectionAngleWithOffset;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	ECardinalDirection LocalVelocityDirection;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Velocity")
-	ECardinalDirection LocalVelocityDirectionNoOffset;
-
-	// Acceleration
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Acceleration")
-	FVector LocalAcceleration2D;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Acceleration")
-	FVector PivotDirection2D;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Acceleration")
-	ECardinalDirection CardinalDirectionFromAcceleration;
-
-	// Character State Flags
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool IsOnGround;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool IsCrouching;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool IsJumping;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool bIsSprint;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool HasVelocity;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool bHasAcceleration;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool IsRunningIntoWall;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	bool CrouchStateChange;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|State")
-	float TimeSinceFiredWeapon;
-
-	// Jump / Fall
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Jump")
-	float TimeToJumpApex;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Jump")
-	float TimeFalling;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Jump")
-	float GroundDistance;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Aiming")
-	float AimPitch;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Debugger|Aiming")
-	float AimYaw;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Aiming")
-	bool bIsAiming;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Aiming")
-	bool bIsBowReady;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Aiming")
-	float AimBlendWeight = 0.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Aiming")
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	float AimBlendSpeed = 10.0f;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Mouse")
-	bool bIsPrimaryDown;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Mouse")
-	float PrimaryBlendWeight = 0.0f;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Mouse")
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	float PrimaryBlendSpeed = 10.0f;
 	
-	UPROPERTY(BlueprintReadOnly, Category = "Guard")
-	bool bIsGuarding;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Guard")
-	float GuardBlendWeight = 0.0f;
-	
-	UPROPERTY(EditDefaultsOnly, Category = "Guard")
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	float GuardBlendSpeed = 10.0f;
-	
-	UPROPERTY(BlueprintReadOnly, Category = "Combat")
-	bool bIsInCombat;
-	
-	UPROPERTY(EditDefaultsOnly)
-	float StopSpeed = 600.f;
-private:
-	// 델타 타임 계산용 이전 프레임 회전값
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Config")
+	TMap<FGameplayTag, ECharacterOverlayState> WeaponTagToStateMap;
+
+	// 내부 로직용 변수 (Sync하지 않고 직접 계산)
+	bool bWasFalling = false;
+	float CurrentFallingSpeed = 0.0f;
 	FRotator PreviousRotation;
 };

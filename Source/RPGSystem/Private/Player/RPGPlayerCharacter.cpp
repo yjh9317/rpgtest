@@ -41,7 +41,8 @@ ARPGPlayerCharacter::ARPGPlayerCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
-	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+	GetCharacterMovement()->BrakingDecelerationFalling = 0.0f;
+	GetCharacterMovement()->AirControl = 0.2f; 
 
 	// Create a camera boom (pulls in towards the player if there is a collision)
 	CameraBoom = CreateDefaultSubobject<URPGSpringArmComponentBase>(TEXT("CameraBoom"));
@@ -64,6 +65,7 @@ void ARPGPlayerCharacter::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
 	
+	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f; 
 	bIsLandRecovery = true;
 
 	float FallingSpeed = -GetVelocity().Z;
@@ -71,6 +73,12 @@ void ARPGPlayerCharacter::Landed(const FHitResult& Hit)
 	{
 		bIsLandRecovery = true;
 	}
+}
+
+void ARPGPlayerCharacter::OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode)
+{
+	Super::OnMovementModeChanged(PrevMovementMode, PreviousCustomMode);
+	UpdateRotationSettings();
 }
 
 void ARPGPlayerCharacter::NotifyControllerChanged()
@@ -106,10 +114,11 @@ void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Sprint, ETriggerEvent::Started, this, &ThisClass::ToggleSprint);
 		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Walk, ETriggerEvent::Started, this, &ThisClass::ToggleWalk);
 		
-		// RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Primary, ETriggerEvent::Started, this, &ThisClass::Input_PrimaryAction);
-		// RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Primary, ETriggerEvent::Completed, this, &ThisClass::Input_PrimaryAction);
-		// RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Started, this, &ThisClass::Input_SecondaryAction);
-		// RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Completed, this, &ThisClass::Input_SecondaryAction);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Primary, ETriggerEvent::Started, this, &ThisClass::Input_PrimaryAction);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Primary, ETriggerEvent::Completed, this, &ThisClass::Input_PrimaryAction);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Started, this, &ThisClass::Input_SecondaryAction);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Completed, this, &ThisClass::Input_SecondaryAction);
+		RPGInputComp->BindAbilityActions(InputConfig, this, &ThisClass::Input_AbilityAction);
 	}
 }
 
@@ -128,46 +137,77 @@ void ARPGPlayerCharacter::BeginPlay()
 	}
 }
 
-bool ARPGPlayerCharacter::UpdateRotationSettings()
+void ARPGPlayerCharacter::UpdateRotationSettings()
 {
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	if (!Movement) return true;
+	if (!Movement) return;
 
 	// 1. 회전을 막아야 하는 상황인지 체크 (공중 OR 경직)
 	bool bShouldLockRotation = Movement->IsFalling() || bIsLandRecovery;
 
 	if (bShouldLockRotation)
 	{
-		// [회전 금지] 카메라를 돌려도 캐릭터는 가만히 있어야 함
+		// [회전 금지]
 		Movement->bUseControllerDesiredRotation = false;
-		Movement->bOrientRotationToMovement = false; // 이동 방향 회전도 잠금
+		Movement->bOrientRotationToMovement = false;
 		bUseControllerRotationYaw = false;
 	}
 	else
 	{
-		// 2. [반대 상황] 땅에 있고 움직일 수 있는 상태 (원래 설정 복구)
-        
-		// (A) 조준(Aiming) 중이라면? -> 카메라 따라돌기
+		// 2. [회전 허용] 땅에 있고 움직일 수 있는 상태
+       
+		// (A) 조준(Aiming) 중 -> 카메라 방향으로 회전 (Strafe)
 		if (bIsAiming) 
 		{
 			Movement->bUseControllerDesiredRotation = true;
-			Movement->bOrientRotationToMovement = false;
+			Movement->bOrientRotationToMovement = true;
+			Movement->RotationRate = FRotator(0.0f, 720.0f, 0.0f); // 조준 시 빠른 회전
 		}
-		// (B) 평상시(Exploration) -> 이동 방향으로 돌기 (소울류 기본)
+		// (B) 평상시(Exploration) -> 이동 방향으로 회전 (Orient)
 		else
 		{
 			Movement->bUseControllerDesiredRotation = false;
 			Movement->bOrientRotationToMovement = true;
+			Movement->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // 이동 시 부드러운 회전
 		}
 	}
-	return false;
+}
+
+void ARPGPlayerCharacter::Input_AbilityAction(const FInputActionValue& Value, FGameplayTag ActionTag)
+{
+	if (ActionComponent)
+	{
+		ActionComponent->ExecuteAction(ActionTag);
+	}
+}
+
+void ARPGPlayerCharacter::UpdateMovementSpeed()
+{
+	if (!GetCharacterMovement()) return;
+
+	float TargetSpeed = 500.0f; // 기본 속도 (Jog)
+
+	if (bIsAiming)
+	{
+		TargetSpeed = 250.0f; // 조준 시 느리게
+	}
+	else if (bIsSprint)
+	{
+		TargetSpeed = 800.0f; // 달리기 속도
+	}
+	else if (bIsWalking)
+	{
+		TargetSpeed = 200.0f; // 걷기 속도
+	}
+
+	// 실제 적용
+	GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
 }
 
 void ARPGPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
-	UpdateRotationSettings();
 }
 
 void ARPGPlayerCharacter::Input_Move(const FInputActionValue& Value)
@@ -224,13 +264,26 @@ void ARPGPlayerCharacter::Input_Jump(const FInputActionValue& Value)
 	{
 		return;
 	}
+	
+	if (bIsSprint)
+	{
+		// 달리기 점프
+		GetCharacterMovement()->BrakingDecelerationFalling = 0.0f;
+	}
+	else
+	{
+		// 걷기 점프
+		GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
+	}
+	
 	Jump();
 }
 
 void ARPGPlayerCharacter::Input_PrimaryAction(const FInputActionValue& Value)
 {
-	const bool bPressed = Value.Get<bool>();
-	bIsPrimaryDown = bPressed;
+	bool bVal = Value.Get<bool>();
+	UE_LOG(LogTemp, Warning, TEXT("Left Input Value: %s"), bVal ? TEXT("TRUE") : TEXT("FALSE"));
+	bIsPrimaryDown = bVal;
 	
 	if (ActionComponent)
 	{
@@ -240,10 +293,11 @@ void ARPGPlayerCharacter::Input_PrimaryAction(const FInputActionValue& Value)
 
 void ARPGPlayerCharacter::Input_SecondaryAction(const FInputActionValue& Value)
 {
-	const bool bPressed = Value.Get<bool>();
-	
-	bIsGuarding = bPressed;
-	bIsAiming = bPressed;
+	bool bVal = Value.Get<bool>();
+	UE_LOG(LogTemp, Warning, TEXT("Right Input Value: %s"), bVal ? TEXT("TRUE") : TEXT("FALSE"));
+	bIsGuarding = !bIsGuarding;
+	bool Aiming = !bIsAiming;
+	SetIsAiming(Aiming);
 	// FGameplayTag WeaponTag = GetCurrentWeaponTag(); 
 	// if (WeaponTag.MatchesTag(RPGGameplayTags::Item_Weapon_Bow))
 	// {
@@ -256,7 +310,7 @@ void ARPGPlayerCharacter::Input_SecondaryAction(const FInputActionValue& Value)
 	// 	bIsGuarding = bPressed;
 	// }
 
-	if (bPressed)
+	if (bVal)
 	{
 		// [Start] 액션 시작 요청
 		ActionComponent->ExecuteAction(RPGGameplayTags::Input_Action_Secondary);
@@ -288,22 +342,17 @@ void ARPGPlayerCharacter::ToggleSprint()
 
 void ARPGPlayerCharacter::SetIsAiming(bool bAiming)
 {
+	if (bIsAiming == bAiming) return;
 	bIsAiming = bAiming;
+	
+	UpdateRotationSettings();
 }
 
 void ARPGPlayerCharacter::SetLandRecovery(bool bState)
 {
 	bIsLandRecovery = bState;
-
-	if (bIsLandRecovery)
-	{
-		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-	}
-	else
-	{
-		GetCharacterMovement()->bUseControllerDesiredRotation = true;
-		
-	}
+	
+	UpdateRotationSettings();
 }
 
 

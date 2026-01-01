@@ -1,0 +1,26 @@
+- FAnimNodeReference: 애님 그래프 내의 *모든* 종류의 애니메이션 노드(블렌드, 스테이트 머신, 시퀀스 플레이어 등)를 가리킬 수 있는 일반적인 참조입니다. 런타임에 노드에 접근하기 위해 사용됩니다.
+
+- FSequencePlayerReference: 애님 그래프 내의 'Sequence Player' 노드(애니메이션 시퀀스 재생 노드)에 특화된 참조입니다. FAnimNodeReference의 하위 개념으로, 특정 시퀀스 플레이어를 제어할 때 사용합니다.
+
+- FAnimUpdateContext: 애니메이션 노드가 업데이트(평가)될 때 전달되는 컨텍스트 구조체입니다. 현재 델타 타임(DeltaTime)이나 노드에 적용되는 가중치(Weight) 같은 실행 시점의 정보를 담고 있습니다.
+
+- USequencePlayerLibrary::ConvertToSequencePlayerPure: 일반 FAnimNodeReference를 FSequencePlayerReference로 변환(캐스팅)을 시도합니다. (블루프린트 Pure 함수)
+
+- USequencePlayerLibrary::SetSequence: FSequencePlayerReference가 가리키는 Sequence Player 노드에서 재생할 애니메이션 시퀀스(UAnimSequence)를 즉시 변경합니다.
+
+- USequencePlayerLibrary::SetSequenceWithInertialBlending: 새로운 애니메이션 시퀀스로 변경하되, 현재 포즈에서 새 애니메이션의 시작 포즈로 '관성 블렌딩(Inertial Blending)'을 적용하여 갑작스러운 포즈 변화 없이 부드럽게 전환시킵니다.
+
+- FFloatSpringState: 플로트(Float) 값에 대한 스프링-댐퍼(Spring-Damper) 시뮬레이션 상태를 저장하는 구조체입니다. 한 값에서 다른 값으로 부드럽게 이동(damping)하거나 통통 튀듯 진동(oscillation)하는 효과를 만드는 데 사용됩니다. (예: 절차적 애니메이션, 카메라 랙)
+
+- FSequenceEvaluatorReference: 애님 그래프 내의 'Sequence Evaluator' 노드에 특화된 참조입니다. 이 노드는 애니메이션을 '재생'하는 것이 아니라, 특정 '시간 값(Explicit Time)'을 입력받아 해당 시간의 포즈를 '평가(evaluate)'하는 데 사용됩니다.
+
+- USequenceEvaluatorLibrary::SetExplicitTime: FSequenceEvaluatorReference가 가리키는 노드의 'Explicit Time'(명시적 시간) 값을 설정합니다. 이 시간 값에 해당하는 애니메이션 포즈가 즉시 평가되어 출력됩니다.
+
+- USequenceEvaluatorLibrary::ConvertToSequenceEvaluatorPure: 일반 FAnimNodeReference를 FSequenceEvaluatorReference로 변환(캐스팅)을 시도합니다. (블루프린트 Pure 함수)
+
+- FAnimationStateResultReference: 스테이트 머신(State Machine) 내의 '스테이트(State)' 자체에 대한 참조입니다. 스테이트 노드의 최종 애니메이션 포즈 출력 결과에 접근할 때 사용됩니다.
+
+- UAnimationStateMachineLibrary::ConvertToAnimationMachine: 일반 FAnimNodeReference를 스테이트 머신(State Machine) 노드에 대한 참조로 변환(캐스팅)을 시도합니다.
+
+- UAnimationStateMachineLibrary::ConvertToAnimationResult: 일반 FAnimNodeReference를 FAnimationStateResultReference(스테이트 결과 노드)로 변환(캐스팅)을 시도합니다.
+

@@ -23,17 +23,35 @@ struct FInputActionConfig
 	TObjectPtr<const UInputAction> InputAction = nullptr;
 };
 
-/**
- * 입력 설정을 관리하는 데이터 에셋
- */
+USTRUCT(BlueprintType)
+struct FAbilityInputConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FGameplayTag ActionTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TObjectPtr<const UInputAction> InputAction = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	ETriggerEvent TriggerEvent = ETriggerEvent::Started;
+};
+
+
 UCLASS()
 class RPGSYSTEM_API UDataAsset_InputConfig : public UDataAsset
 {
 	GENERATED_BODY()
 
 public:
+	// 이동, 시점 변환 등 고정된 네이티브 입력
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputTag"))
 	TArray<FInputActionConfig> NativeInputActions;
+	
+	// 액션 컴포넌트 실행용 입력
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (TitleProperty = "InputTag"))
+	TArray<FAbilityInputConfig> AbilityInputActions;
 
 	const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 };

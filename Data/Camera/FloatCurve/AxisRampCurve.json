@@ -1,0 +1,51 @@
+{
+	"floatCurve":
+	{
+		"keys": [
+			{
+				"interpMode": "RCIM_Cubic",
+				"tangentMode": "RCTM_User",
+				"tangentWeightMode": "RCTWM_WeightedBoth",
+				"time": -1,
+				"value": -1,
+				"arriveTangent": -0.0060444921255111694,
+				"arriveTangentWeight": 0.92773836851119995,
+				"leaveTangent": -0.0060444921255111694,
+				"leaveTangentWeight": 0.92773836851119995
+			},
+			{
+				"interpMode": "RCIM_Cubic",
+				"tangentMode": "RCTM_User",
+				"tangentWeightMode": "RCTWM_WeightedBoth",
+				"time": 0,
+				"value": 0,
+				"arriveTangent": -0.0060444921255111694,
+				"arriveTangentWeight": 0.92773836851119995,
+				"leaveTangent": -0.0060444921255111694,
+				"leaveTangentWeight": 0.92773836851119995
+			},
+			{
+				"interpMode": "RCIM_Cubic",
+				"tangentMode": "RCTM_User",
+				"tangentWeightMode": "RCTWM_WeightedBoth",
+				"time": 1,
+				"value": 1,
+				"arriveTangent": 3.3584501579753123e-07,
+				"arriveTangentWeight": 0.3333333432674408,
+				"leaveTangent": 3.3584501579753123e-07,
+				"leaveTangentWeight": 0.41727030277252197
+			}
+		],
+		"defaultValue": 3.4028234663852886e+38,
+		"preInfinityExtrap": "RCCE_Constant",
+		"postInfinityExtrap": "RCCE_Constant"
+	},
+	"bIsEventCurve": false,
+	"assetImportData":
+	{
+		"_ClassName": "/Script/Engine.AssetImportData",
+		"sourceData":
+		{
+		}
+	}
+}

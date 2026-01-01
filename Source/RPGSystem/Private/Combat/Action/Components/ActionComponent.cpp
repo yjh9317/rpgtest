@@ -3,6 +3,7 @@
 
 #include "Combat/Action/Components/ActionComponent.h"
 #include "Combat/Action/BaseAction.h"
+#include "Combat/Action/DataAsset_ActionConfig.h"
 
 UActionComponent::UActionComponent()
 {
@@ -20,7 +21,20 @@ void UActionComponent::TickComponent(float DeltaTime, ELevelTick TickType,
     FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-    UpdateActiveActions(DeltaTime);
+    
+    for (int32 i = TickingActions.Num() - 1; i >= 0; --i)
+    {
+        UBaseAction* Action = TickingActions[i];
+        if (Action && Action->IsActive())
+        {
+            Action->Tick(DeltaTime);
+        }
+        else
+        {
+            // 비활성화되었는데 리스트에 남아있다면 제거
+            TickingActions.RemoveAt(i);
+        }
+    }
 }
 
 void UActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBaseAction> ActionClass, UObject* SourceObject)
@@ -65,7 +79,6 @@ void UActionComponent::RemoveActionsBySource(UObject* SourceObject)
 
     TArray<FGameplayTag> TagsToRemove;
 
-    // 1. 해당 소스(아이템)가 만든 액션 태그 찾기
     for (auto It = ActionInstances.CreateIterator(); It; ++It)
     {
         UBaseAction* Action = It.Value();
@@ -75,28 +88,31 @@ void UActionComponent::RemoveActionsBySource(UObject* SourceObject)
         }
     }
 
-    // 2. 제거 및 복구 진행
     for (const FGameplayTag& Tag : TagsToRemove)
     {
-        // A. 액션 제거
         UBaseAction* ActionToRemove = ActionInstances[Tag];
-        if (ActionToRemove)
+        if (ActionToRemove && ActionToRemove->IsActive())
         {
-            if (ActionToRemove->IsActive()) 
-            {
-                ActionToRemove->Interrupt();
-            }
+            ActionToRemove->Interrupt();
         }
         ActionInstances.Remove(Tag);
-        
-        UE_LOG(LogTemp, Log, TEXT("Action Removed: [%s] from Source: [%s]"),*Tag.ToString(), *GetNameSafe(SourceObject));
 
-        // B. [중요] 기본 액션 복구 (Restore Default)
-        // 만약 이 태그가 '기본 액션' 목록에 포함된 태그라면 다시 생성
-        if (ActionClasses.Contains(Tag))
+        if (DefaultActionSet)
         {
-            CreateActionInstance(Tag);
-            UE_LOG(LogTemp, Log, TEXT(" -> Default Action Restored: [%s]"), *Tag.ToString());
+            for (const FActionDefinition& Def : DefaultActionSet->DefaultActions)
+            {
+                if (Def.ActionTag == Tag && Def.ActionClass)
+                {
+                    UBaseAction* NewAction = NewObject<UBaseAction>(this, Def.ActionClass);
+                    NewAction->Initialize(GetOwner()); // SourceObject 없음 (기본으로 복귀)
+                    NewAction->ActionTag = Def.ActionTag;
+                    
+                    ActionInstances.Add(Tag, NewAction);
+                    
+                    UE_LOG(LogTemp, Log, TEXT(" -> Default Action Restored: [%s]"), *Tag.ToString());
+                    break;
+                }
+            }
         }
     }
 }
@@ -116,18 +132,17 @@ void UActionComponent::RegisterAction(const FGameplayTag& ActionTag, TSubclassOf
         return;
     }
 
-    if (ActionClasses.Contains(ActionTag))
+    if (ActionInstances.Contains(ActionTag))
     {
         UnregisterAction(ActionTag);
     }
 
-    ActionClasses.Add(ActionTag, ActionClass);
+    UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionClass);
+    NewAction->Initialize(GetOwner());
+    NewAction->ActionTag = ActionTag;
     
-    // 런타임에 등록된 경우 즉시 인스턴스 생성
-    if (HasBegunPlay())
-    {
-        CreateActionInstance(ActionTag);
-    }
+    ActionInstances.Add(ActionTag, NewAction);
+    
 }
 
 void UActionComponent::UnregisterAction(const FGameplayTag& ActionTag)
@@ -145,8 +160,6 @@ void UActionComponent::UnregisterAction(const FGameplayTag& ActionTag)
         Action->ConditionalBeginDestroy();
     }
 
-    ActionClasses.Remove(ActionTag);
-
     UE_LOG(LogTemp, Log, TEXT("Unregistered action: %s"), *ActionTag.ToString());
 }
 
@@ -158,42 +171,6 @@ UBaseAction* UActionComponent::GetAction(const FGameplayTag& ActionTag) const
     return ActionInstances.FindRef(ActionTag);
 }
 
-UBaseAction* UActionComponent::CreateActionInstance(const FGameplayTag& ActionTag)
-{
-    if (!ActionTag.IsValid())
-    {
-        return nullptr;
-    }
-
-    // 이미 인스턴스가 있다면 반환
-    if (UBaseAction* ExistingAction = ActionInstances.FindRef(ActionTag))
-    {
-        return ExistingAction;
-    }
-
-    // 클래스 찾기
-    TSubclassOf<UBaseAction> ActionClass = ActionClasses.FindRef(ActionTag);
-    if (!ActionClass)
-    {
-        return nullptr;
-    }
-
-    // 새 인스턴스 생성
-    UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionClass);
-    if (!NewAction)
-    {
-        UE_LOG(LogTemp, Error, TEXT("ActionComponent::CreateActionInstance - Failed to create instance for %s"), 
-               *ActionTag.ToString());
-        return nullptr;
-    }
-
-    // 초기화
-    NewAction->Initialize(GetOwner());
-    ActionInstances.Add(ActionTag, NewAction);
-
-    return NewAction;
-}
-
 bool UActionComponent::ExecuteAction(const FGameplayTag& ActionTag)
 {
     if (!ActionTag.IsValid()) return false;
@@ -201,11 +178,9 @@ bool UActionComponent::ExecuteAction(const FGameplayTag& ActionTag)
     UBaseAction* Action = GetAction(ActionTag);
     if (!Action)
     {
-        Action = CreateActionInstance(ActionTag);
-        if (!Action) return false;
+        return false;
     }
 
-    // [변경 핵심] 이미 활성 상태인가?
     if (Action->IsActive())
     {
         // 활성 상태라면 콤보(입력) 처리를 시도한다.
@@ -234,6 +209,11 @@ bool UActionComponent::ExecuteActionInstance(UBaseAction* Action)
 
     ActiveActions.AddUnique(Action);
     Action->Execute();
+    
+    if (Action->bWantsTick)
+    {
+        TickingActions.AddUnique(Action);
+    }
        
     return true;
 }
@@ -308,43 +288,22 @@ bool UActionComponent::IsActionActive(const FGameplayTag& ActionTag) const
 
 void UActionComponent::CreateActionInstances()
 {
-    for (const auto& ActionPair : ActionClasses)
+    if (!DefaultActionSet)
     {
-        const FGameplayTag& ActionTag = ActionPair.Key;
-        TSubclassOf<UBaseAction> ActionClass = ActionPair.Value;
-        
-        if (!ActionTag.IsValid() || !ActionClass)
-        {
-            UE_LOG(LogTemp, Warning, TEXT("ActionComponent::CreateActionInstances - Invalid action data"));
-            continue;
-        }
-
-        CreateActionInstance(ActionTag);
+        UE_LOG(LogTemp, Error, TEXT("ActionComponent: DefaultActionSet is missing!"));
+        return;
     }
-}
 
-void UActionComponent::UpdateActiveActions(float DeltaTime)
-{
-    // 역순으로 순회하면서 업데이트 (안전한 제거를 위해)
-    for (int32 i = ActiveActions.Num() - 1; i >= 0; --i)
+    for (const FActionDefinition& ActionDef : DefaultActionSet->DefaultActions)
     {
-        UBaseAction* Action = ActiveActions[i];
-        
-        if (!Action)
-        {
-            ActiveActions.RemoveAt(i);
-            continue;
-        }
+        if (!ActionDef.ActionClass || !ActionDef.ActionTag.IsValid()) continue;
+        if (ActionInstances.Contains(ActionDef.ActionTag)) continue;
 
-        if (Action->IsActive())
-        {
-            Action->Tick(DeltaTime);
-        }
-        else
-        {
-            ActiveActions.RemoveAt(i);
-            OnActionCompleted(Action);
-        }
+        UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionDef.ActionClass);
+        NewAction->Initialize(GetOwner()); // SourceObject는 nullptr (기본 스킬이므로)
+        NewAction->ActionTag = ActionDef.ActionTag;
+
+        ActionInstances.Add(ActionDef.ActionTag, NewAction);
     }
 }
 
@@ -352,8 +311,12 @@ void UActionComponent::OnActionCompleted(UBaseAction* Action)
 {
     if (!Action) return;
 
-    // 활성 목록에서 제거
     ActiveActions.Remove(Action);
+    
+    if (Action->bWantsTick)
+    {
+        TickingActions.Remove(Action);
+    }
 }
 
 
@@ -361,7 +324,7 @@ void UActionComponent::OnActionCompleted(UBaseAction* Action)
 TArray<FGameplayTag> UActionComponent::GetRegisteredActionTags() const
 {
     TArray<FGameplayTag> Tags;
-    ActionClasses.GetKeys(Tags);
+    ActionInstances.GetKeys(Tags);
     return Tags;
 }
 

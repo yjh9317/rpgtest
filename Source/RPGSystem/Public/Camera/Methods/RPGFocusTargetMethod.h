@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(Blueprintable,BlueprintType,EditInlineNew)
 class RPGSYSTEM_API URPGFocusTargetMethod : public UObject
 {
 	GENERATED_BODY()

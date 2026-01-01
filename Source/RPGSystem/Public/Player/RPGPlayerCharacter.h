@@ -43,9 +43,10 @@ protected:
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void Landed(const FHitResult& Hit) override;
+	virtual void OnMovementModeChanged(EMovementMode PrevMovementMode, uint8 PreviousCustomMode = 0) override;
 	
-	bool UpdateRotationSettings();
-
+	void UpdateRotationSettings();
+	void UpdateMovementSpeed();
 #pragma region InputFunc
 	void Input_Move(const FInputActionValue& Value);
 	void Input_Look(const FInputActionValue& Value);
@@ -53,6 +54,7 @@ protected:
 	void Input_Jump(const FInputActionValue& Value);
 	void Input_PrimaryAction(const FInputActionValue& Value);
 	void Input_SecondaryAction(const FInputActionValue& Value);
+	void Input_AbilityAction(const FInputActionValue& Value, FGameplayTag ActionTag);
 #pragma endregion InputFunc
 	
 #pragma region Toggle
@@ -123,6 +125,7 @@ public:
 	virtual void InitializeInteractionWithObject(UInteractableComponent* InteractableComponent) override;
 	virtual AActor* GetCurrentInteractableObject() override;
 	
+	FORCEINLINE bool IsWalking() const { return bIsWalking; }
 	FORCEINLINE bool IsAiming() const { return bIsAiming; }
 	FORCEINLINE bool IsCrouch() const { return bIsCrouch; }
 	FORCEINLINE bool IsSprint() const { return bIsSprint; }
