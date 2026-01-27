@@ -2,9 +2,8 @@
 
 
 #include "Event/GlobalEventHandler.h"
-
 #include "GameplayTagContainer.h"
-#include "Event/EventBase/RPGEventBase.h"
+#include "Event/RPGEventBase.h"
 
 
 void UGlobalEventHandler::CallGlobalEventByClass(UObject* Publisher, TSubclassOf<URPGEventBase> EventClass,

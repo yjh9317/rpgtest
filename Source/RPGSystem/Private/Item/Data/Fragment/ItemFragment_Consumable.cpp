@@ -57,7 +57,7 @@ void UItemFragment_Consumable::ApplyEffects(AActor* User)
 					BuffID, 
 					Effect.Value, 
 					Effect.Duration, 
-					EStatModifierType::Flat // 기획에 따라 Percentage 등으로 변경 가능
+					EModifierSourceType::Flat // 기획에 따라 Percentage 등으로 변경 가능
 				);
 			}
 			break;

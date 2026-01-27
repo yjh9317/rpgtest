@@ -416,7 +416,7 @@ void UUIUtilityLibrary::SetImageBrush(UImage* Target, UObject* Brush)
 	
 	if (Texture)
 	{
-		FSlateBrush NewBrush = Target->Brush;;
+		FSlateBrush NewBrush = Target->GetBrush();
 		NewBrush.SetResourceObject(Texture);
 		Target->SetBrush(NewBrush);
 	}
@@ -437,14 +437,14 @@ void UUIUtilityLibrary::SetImageBrushTiling(UImage* Target, ESlateBrushTileType:
 {
 	if (!Target) return;
 	
-	FSlateBrush NewBrush = Target->Brush;
+	FSlateBrush NewBrush = Target->GetBrush();
 	NewBrush.Tiling = NewType;
 	Target->SetBrush(NewBrush);	
 }
 
 void UUIUtilityLibrary::SetImageBrushSize(UImage* Target, FVector2D NewSize)
 {
-	FSlateBrush NewBrush = Target->Brush;
+	FSlateBrush NewBrush = Target->GetBrush();
 	NewBrush.ImageSize = NewSize;
 	Target->SetBrush(NewBrush);	
 }

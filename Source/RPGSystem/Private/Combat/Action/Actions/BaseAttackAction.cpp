@@ -3,7 +3,7 @@
 
 #include "Combat/Action/Actions/BaseAttackAction.h"
 
-#include "Combat/Components/CombatComponent.h"
+#include "Combat/Components/CombatComponentBase.h"
 #include "GameFramework/Character.h"
 
 
@@ -37,7 +37,7 @@ void UBaseAttackAction::Initialize(AActor* NewActionOwner, UObject* NewSourceObj
     // }
 }
 
-UCombatComponent* UBaseAttackAction::GetCombatComponent() const
+UCombatComponentBase* UBaseAttackAction::GetCombatComponent() const
 {
     if (CachedCombatComponent)
     {
@@ -49,7 +49,7 @@ UCombatComponent* UBaseAttackAction::GetCombatComponent() const
         return nullptr;
     }
 
-    return OwnerCharacter->FindComponentByClass<UCombatComponent>();
+    return OwnerCharacter->FindComponentByClass<UCombatComponentBase>();
 }
 
 bool UBaseAttackAction::HasAttackResources() const
@@ -74,7 +74,7 @@ bool UBaseAttackAction::CanExecute() const
         return false;
     }
 
-    UCombatComponent* CombatComp = const_cast<UBaseAttackAction*>(this)->GetCombatComponent();
+    UCombatComponentBase* CombatComp = const_cast<UBaseAttackAction*>(this)->GetCombatComponent();
     if (!CombatComp)
     {
         return false;
@@ -95,7 +95,7 @@ bool UBaseAttackAction::CanExecute() const
 
 float UBaseAttackAction::ApplyAttackToCurrentTarget()
 {
-    UCombatComponent* CombatComp = GetCombatComponent();
+    UCombatComponentBase* CombatComp = GetCombatComponent();
     if (!CombatComp)
     {
         return 0.f;

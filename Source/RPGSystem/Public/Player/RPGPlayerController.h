@@ -8,6 +8,7 @@
 #include "SaveSystem/Interface/RPGActorSaveInterface.h"
 #include "RPGPlayerController.generated.h"
 
+class UDamageFloatManagerComponent;
 class UPlayerInventoryWidget;
 /**
  * 
@@ -18,6 +19,8 @@ class RPGSYSTEM_API ARPGPlayerController : public APlayerController, public IRPG
 	GENERATED_BODY()
 	
 public:
+	ARPGPlayerController();
+	
 	virtual void BeginPlay() override;
 	virtual void SetupInputComponent() override;
 	virtual void OnPossess(APawn* InPawn) override;
@@ -33,7 +36,7 @@ protected:
 	TSubclassOf<class URPGHUDWidget> HUDWidgetClass;
 
 	UPROPERTY(BlueprintReadOnly, Category = "UI")
-	TObjectPtr<class URPGHUDWidget> HUDWidgetInstance;
+	TObjectPtr<class URPGHUDWidget> HUDWidget;
 	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputMappingContext> InputMappingContext;
@@ -43,6 +46,9 @@ protected:
 	
 	UPROPERTY()
 	TObjectPtr<class UStatsViewModel> StatsViewModel;
+	
+	UPROPERTY()
+	TObjectPtr<UDamageFloatManagerComponent> DamageFloatManagerComponent;
 	
 #pragma region SaveInterfaceFunc
 	
@@ -73,6 +79,8 @@ public:
 	
 	void TestSaveGame();
 	void TestLoadGame();
+	
+	void ApplySavedInputSettings();
 
 	UFUNCTION()
 	void HandleSaveCompleted();

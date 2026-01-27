@@ -9,7 +9,7 @@ class ARPGPlayerCharacter;
 class UPlayerAnimInstance;
 
 /**
- * PIE에서 ARPGPlayerCharacter를 자동으로 찾아 Locomotion 상태를 보여주는 디버거
+ * PIE에서 ARPGPlayerCharacter를 자동으로 찾아 Locomotion 및 Combat 상태를 보여주는 디버거
  */
 class RPGSYSTEMEDITOR_API SLocomotionDebugger : public SCompoundWidget
 {
@@ -28,62 +28,37 @@ private:
 	TSharedRef<SWidget> MakeSectionHeader(const FText& HeaderText, FLinearColor Color);
 	TSharedRef<SWidget> MakeDebugRow(const FText& Label, const TAttribute<FText>& ValueAttribute);
 
-	/** --- Data Getters (AnimInstance의 Property를 읽어옴) --- */
+	/** --- Data Getters (AnimInstance의 데이터를 읽어옴) --- */
 	
 	// Actor Info
 	FText GetTargetName() const;
 
-	// [New] Combat & Overlay Data
-	FText GetAnimOverlayState() const;
-	FText GetAnimWeaponStyle() const;
-	FText GetAnimCombatState() const; // bIsInCombat
+	// [LOCOMOTION DATA]
+	FText GetLoco_GroundSpeed() const;
+	FText GetLoco_Velocity() const;
+	FText GetLoco_InputAcceleration() const;
+	FText GetLoco_Direction() const;
+	FText GetLoco_WorldRotation() const;
+	FText GetLoco_MovementFlags() const;
+	FText GetLoco_StateFlags() const;
+	FText GetLoco_LandingImpact() const;
 
-	// Location Data
-	FText GetAnimWorldLocation() const;
-	FText GetAnimDisplacementSpeed() const;
+	// [COMBAT DATA]
+	FText GetCombat_IsInCombat() const;
+	FText GetCombat_OverlayState() const;
+	FText GetCombat_WeaponStyle() const;
+	FText GetCombat_AimOffset() const;
+	FText GetCombat_AimBlendWeight() const;
+	FText GetCombat_AimFlags() const;
+	FText GetCombat_PrimaryAction() const;
+	FText GetCombat_GuardAction() const;
 
-	// Rotation Data
-	FText GetAnimWorldRotation() const;
-	FText GetAnimYawDeltaSpeed() const;
-	FText GetAnimAdditiveLeanAngle() const;
-	FText GetAnimRootYawOffset() const;
-
-	// Velocity Data
-	FText GetAnimWorldVelocity() const;
-	FText GetAnimLocalVelocity2D() const;
-	FText GetAnimLocalVelocityDirAngle() const;
-	FText GetAnimLocalVelocityDir() const;
-
-	// Acceleration Data
-	FText GetAnimLocalAcceleration2D() const;
-	FText GetAnimPivotDirection() const;
-	FText GetAnimCardinalDirFromAccel() const;
-
-	// Character State Data
-	FText GetAnimStateFlags() const;      // 기존 State Flags
-	FText GetAnimMovementFlags() const;   // [New] bShouldMove, bIsMovingBackward, etc.
-	FText GetAnimTimeSinceFired() const;
-
-	// Jump / Fall Data
-	FText GetAnimTimeToJumpApex() const;
-	FText GetAnimTimeFalling() const;
-	FText GetAnimGroundDistance() const;
-	FText GetAnimLandingImpact() const;   // [New] LandingImpactSpeed
-
-	// Aiming Data
-	FText GetAnimAiming() const;          // Pitch / Yaw
-	FText GetAnimAimingFlags() const;     // [New] IsAiming, IsBowReady
-	FText GetAnimAimBlend() const;        // [New] AimBlendWeight
-	
-	FText GetAnimPrimaryDown() const;
-	FText GetAnimPrimaryBlend() const;
-	FText GetAnimGuardBlend() const;
-	FText GetAnimGuarding() const;
-	/** --- Reflection Helpers --- */
+	/** --- Deprecated / Unused Reflection Helpers --- */
+	// .cpp와의 호환성을 위해 남겨두었으나, 내부는 비워져 있습니다.
 	FString GetEnumPropertyAsString(UObject* Obj, FName PropName, const TCHAR* EnumPath) const;
 	FString GetBoolPropertyAsString(UObject* Obj, FName PropName) const;
 	float GetFloatProperty(UObject* Obj, FName PropName) const;
-	int32 GetIntProperty(UObject* Obj, FName PropName) const; // [New] Added for WeaponStyle
+	int32 GetIntProperty(UObject* Obj, FName PropName) const;
 	FString GetVectorPropertyAsString(UObject* Obj, FName PropName) const;
 	FString GetRotatorPropertyAsString(UObject* Obj, FName PropName) const;
 

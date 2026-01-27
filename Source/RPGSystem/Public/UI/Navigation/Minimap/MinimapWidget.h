@@ -155,6 +155,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UMinimapDistantMarkerWidget> MinimapDistantMarkerClass;
 
+	UPROPERTY(EditDefaultsOnly)
+	bool bShowImageInDesignTime = false;
 protected:
 	// 페이드 인/아웃 효과 처리
 	void HandleFadeInMinimap(float FadeInSpeedPointer = 3.f,float FadeInSpeedMap = 4.f);

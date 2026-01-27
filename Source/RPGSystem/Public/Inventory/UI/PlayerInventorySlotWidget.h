@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Item/Data/ItemDataStructure.h"
-#include "UI/Base/RPGInteractableWidget.h"
+#include "UI/Base/RPGButtonWidget.h"
 #include "PlayerInventorySlotWidget.generated.h"
 
 class UItemDragAndDropWidget;
@@ -19,7 +19,7 @@ class UInventoryCoreComponent;
  * 
  */
 UCLASS()
-class RPGSYSTEM_API UPlayerInventorySlotWidget : public URPGInteractableWidget
+class RPGSYSTEM_API UPlayerInventorySlotWidget : public URPGButtonWidget
 {
 	GENERATED_BODY()
 

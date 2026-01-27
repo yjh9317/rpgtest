@@ -6,7 +6,7 @@
 #include "Combat/Action/BaseAction.h"
 #include "BaseAttackAction.generated.h"
 
-class UCombatComponent;
+class UCombatComponentBase;
 
 UCLASS(Blueprintable)
 class RPGSYSTEM_API UBaseAttackAction : public UBaseAction
@@ -28,7 +28,7 @@ protected:
 	float BaseStaminaCost = 10.f;
 
 	UPROPERTY()
-	TObjectPtr<UCombatComponent> CachedCombatComponent = nullptr;
+	TObjectPtr<UCombatComponentBase> CachedCombatComponent = nullptr;
 
 public:
 	virtual void Initialize(AActor* NewActionOwner, UObject* NewSourceObject = nullptr) override;
@@ -38,7 +38,7 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Attack")
 	virtual float ApplyAttackToCurrentTarget();
 
-	UCombatComponent* GetCombatComponent() const;
+	UCombatComponentBase* GetCombatComponent() const;
 
 	// 스태미너/리소스 체크용
 	virtual bool HasAttackResources() const;

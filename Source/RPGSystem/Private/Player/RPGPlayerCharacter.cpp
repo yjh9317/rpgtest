@@ -160,7 +160,7 @@ void ARPGPlayerCharacter::UpdateRotationSettings()
 		if (bIsAiming) 
 		{
 			Movement->bUseControllerDesiredRotation = true;
-			Movement->bOrientRotationToMovement = true;
+			Movement->bOrientRotationToMovement = false;
 			Movement->RotationRate = FRotator(0.0f, 720.0f, 0.0f); // 조준 시 빠른 회전
 		}
 		// (B) 평상시(Exploration) -> 이동 방향으로 회전 (Orient)

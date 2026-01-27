@@ -4,23 +4,32 @@
 #include "HUD/RPGHUDWidget.h"
 
 #include "Inventory/DragDrop/InventoryDragDropOperation.h"
+#include "Status/StatsViewModel.h"
+
+
+void URPGHUDWidget::NativeConstruct()
+{
+	Super::NativeConstruct();
+	
+	if (!StatsViewModel)
+	{
+		StatsViewModel = NewObject<UStatsViewModel>(this);
+	}
+}
 
 void URPGHUDWidget::InitializeHUD(APawn* OwningPawn)
 {
 	CachedPawn = OwningPawn;
+	
 }
 
-void URPGHUDWidget::BindStatsModel(UStatsViewModel* InStatsViewModel)
+void URPGHUDWidget::SetViewModel(UStatsViewModel* InViewModel)
 {
-	// 여기서 하위 StatBar 위젯들에게 ViewModel을 연결해줍니다.
-	// if (WB_StatBars && InStatsViewModel)
-	// {
-	//     WB_StatBars->Setup(InStatsViewModel);
-	// }
+	StatsViewModel = InViewModel;
 }
 
 bool URPGHUDWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
-	UDragDropOperation* InOperation)
+                                 UDragDropOperation* InOperation)
 {
 	UInventoryDragDropOperation* RPGOp = Cast<UInventoryDragDropOperation>(InOperation);
 	if (RPGOp)
@@ -31,6 +40,7 @@ bool URPGHUDWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEve
 	}
 	return Super::NativeOnDrop(InGeometry, InDragDropEvent, InOperation);
 }
+
 
 void URPGHUDWidget::DropItemToWorld(FGuid InventoryGuid, int32 SlotIndex)
 {

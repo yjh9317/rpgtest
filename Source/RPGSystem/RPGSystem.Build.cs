@@ -25,7 +25,9 @@ public class RPGSystem : ModuleRules
 			"UMG",     
 			"Slate",   
 			"SlateCore",
-			"Niagara"
+			"Niagara",
+			"RenderCore",
+			"RHI" 
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]

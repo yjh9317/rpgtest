@@ -31,106 +31,69 @@ void SLocomotionDebugger::Construct(const FArguments& InArgs)
 			[
 				SNew(SVerticalBox)
 
-				// === 1. Target Info ===
+				// =========================================================
+				// 1. TARGET ACTOR (대상 정보)
+				// =========================================================
 				+ SVerticalBox::Slot().AutoHeight()
 				[
 					MakeSectionHeader(LOCTEXT("TargetHeader", "TARGET ACTOR"), FLinearColor(0.2f, 1.0f, 0.2f))
 				]
 				+ SVerticalBox::Slot().AutoHeight()
 				[
-					MakeDebugRow(LOCTEXT("TargetLabel", "Selected Character:"), 
+					MakeDebugRow(LOCTEXT("TargetLabel", "Character Name:"), 
 						TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetTargetName)))
 				]
 
-				// === 2. Combat & Overlay ===
+				// =========================================================
+				// 2. LOCOMOTION DATA (이동 데이터)
+				// =========================================================
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
 				[
-					MakeSectionHeader(LOCTEXT("CombatHeader", "COMBAT & OVERLAY"), FLinearColor(1.0f, 0.4f, 0.4f))
+					MakeSectionHeader(LOCTEXT("LocomotionHeader", "LOCOMOTION DATA"), FLinearColor(1.0f, 0.8f, 0.2f))
 				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("Overlay", "Overlay State:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimOverlayState))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WpnStyle", "Weapon Style (Int):"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimWeaponStyle))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("CombatState", "Is In Combat:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimCombatState))) ]
+				// Basic Movement
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("GroundSpeed", "Ground Speed:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_GroundSpeed))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("Velocity", "Velocity (Vector):"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_Velocity))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("InputAccel", "Input Acceleration:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_InputAcceleration))) ]
+				
+				// Direction & Rotation
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("LocoDir", "Locomotion Direction:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_Direction))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WorldRot", "World Rotation:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_WorldRotation))) ]
 
-				// === 3. Location Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
+				// Booleans (Flags)
+				+ SVerticalBox::Slot().AutoHeight().Padding(0, 5, 0, 0)
 				[
-					MakeSectionHeader(LOCTEXT("LocationHeader", "LOCATION DATA"), FLinearColor(1.0f, 0.8f, 0.2f))
+					MakeDebugRow(LOCTEXT("MoveFlags", "Movement Flags:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_MovementFlags)))
 				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WorldLoc", "World Location:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimWorldLocation))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("DispSpeed", "Displacement Speed:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimDisplacementSpeed))) ]
-
-				// === 4. Rotation Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("RotationHeader", "ROTATION DATA"), FLinearColor(1.0f, 0.8f, 0.2f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WorldRot", "World Rotation:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimWorldRotation))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("YawDelta", "Yaw Delta Speed:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimYawDeltaSpeed))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("LeanAngle", "Additive Lean Angle:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimAdditiveLeanAngle))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("RootYaw", "Root Yaw Offset:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimRootYawOffset))) ]
-
-				// === 5. Velocity Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("VelocityHeader", "VELOCITY DATA"), FLinearColor(1.0f, 0.8f, 0.2f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WorldVel", "World Velocity:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimWorldVelocity))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("LocalVel", "Local Velocity 2D:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimLocalVelocity2D))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("VelAngle", "Dir Angle (Off/NoOff):"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimLocalVelocityDirAngle))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("VelDir", "Cardinal Direction:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimLocalVelocityDir))) ]
-
-				// === 6. Acceleration Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("AccelHeader", "ACCELERATION DATA"), FLinearColor(1.0f, 0.8f, 0.2f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("LocalAccel", "Local Accel 2D:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimLocalAcceleration2D))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("PivotDir", "Pivot Direction:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimPivotDirection))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AccelCard", "Accel Cardinal:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimCardinalDirFromAccel))) ]
-
-				// === 7. State Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("StateHeader", "CHARACTER STATE"), FLinearColor(0.2f, 0.8f, 1.0f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("MoveFlags", "Movement Flags:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimMovementFlags))) ]
 				+ SVerticalBox::Slot().AutoHeight()
 				[
-					SNew(STextBlock)
-					.Text(this, &SLocomotionDebugger::GetAnimStateFlags)
-					.ColorAndOpacity(FLinearColor::White)
-					.AutoWrapText(true)
+					MakeDebugRow(LOCTEXT("StateFlags", "State Flags:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_StateFlags)))
 				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("FireTime", "Time Since Fired:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimTimeSinceFired))) ]
 
-				// === 8. Jump / Fall Data ===
+				// Fall & Jump
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("Landing", "Landing Impact:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetLoco_LandingImpact))) ]
+
+
+				// =========================================================
+				// 3. COMBAT DATA (전투 데이터)
+				// =========================================================
 				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
 				[
-					MakeSectionHeader(LOCTEXT("JumpHeader", "JUMP / FALL / LAND"), FLinearColor(1.0f, 0.5f, 0.5f))
+					MakeSectionHeader(LOCTEXT("CombatHeader", "COMBAT DATA"), FLinearColor(1.0f, 0.4f, 0.4f))
 				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("JumpApex", "Time To Jump Apex:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimTimeToJumpApex))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("TimeFall", "Time Falling:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimTimeFalling))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("GroundDist", "Ground Distance:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimGroundDistance))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("LandImp", "Landing Speed:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimLandingImpact))) ]
+				// Status
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("CombatState", "Is In Combat:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_IsInCombat))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("Overlay", "Overlay State:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_OverlayState))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("WpnStyle", "Weapon Style:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_WeaponStyle))) ]
 
-				// === 9. Aiming Data ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("AimHeader", "AIMING DATA"), FLinearColor(0.5f, 1.0f, 0.5f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimFlags", "Aim Flags:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimAimingFlags))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimData", "Pitch / Yaw:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimAiming))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimBlend", "Aim Blend Weight:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimAimBlend))) ]
+				// Aiming
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimOffset", "Aim Offset (Pitch/Yaw):"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_AimOffset))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimBlend", "Aim Blend Weight:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_AimBlendWeight))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("AimFlags", "Aiming / BowReady:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_AimFlags))) ]
 
-				// === 10. Action & Guard Data (New!) ===
-				+ SVerticalBox::Slot().AutoHeight().Padding(0, 10, 0, 0)
-				[
-					MakeSectionHeader(LOCTEXT("ActionGuardHeader", "ACTION & GUARD"), FLinearColor(1.0f, 0.2f, 0.2f))
-				]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("PrimaryDown", "Primary Down:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimPrimaryDown))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("PrimaryBlend", "Primary Blend:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimPrimaryBlend))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("IsGuarding", "Is Guarding:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimGuarding))) ]
-				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("GuardBlend", "Guard Blend:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetAnimGuardBlend))) ]
+				// Action & Guard
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("PrimaryAction", "Primary Action:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_PrimaryAction))) ]
+				+ SVerticalBox::Slot().AutoHeight() [ MakeDebugRow(LOCTEXT("GuardAction", "Guard Action:"), TAttribute<FText>::Create(TAttribute<FText>::FGetter::CreateSP(this, &SLocomotionDebugger::GetCombat_GuardAction))) ]
 			]
 		]
 	];
@@ -203,7 +166,7 @@ TSharedRef<SWidget> SLocomotionDebugger::MakeDebugRow(const FText& Label, const 
 		[
 			SNew(STextBlock)
 			.Text(Label)
-			.MinDesiredWidth(160.0f)
+			.MinDesiredWidth(150.0f)
 			.ColorAndOpacity(FLinearColor::Gray)
 		]
 		+ SHorizontalBox::Slot()
@@ -220,334 +183,156 @@ TSharedRef<SWidget> SLocomotionDebugger::MakeDebugRow(const FText& Label, const 
 // Data Getters implementation
 // ====================================================================================
 
+#define CHECK_ANIM_RET_EMPTY() if (!CachedAnimInstance.IsValid()) return FText::GetEmpty();
+
 FText SLocomotionDebugger::GetTargetName() const
 {
 	if (TargetCharacter.IsValid()) return FText::FromString(TargetCharacter->GetName());
 	return LOCTEXT("Waiting", "Waiting for PIE...");
 }
 
-// --- Combat & Overlay ---
-FText SLocomotionDebugger::GetAnimOverlayState() const
+// ------------------------------------------------------------------------------------
+// [LOCOMOTION DATA] Getters
+// ------------------------------------------------------------------------------------
+
+FText SLocomotionDebugger::GetLoco_GroundSpeed() const
 {
-	if (CachedAnimInstance.IsValid())
-	{
-		return FText::FromString(GetEnumPropertyAsString(CachedAnimInstance.Get(), TEXT("OverlayState"), TEXT("/Script/RPGSystem.ECharacterOverlayState")));
-	}
-	return FText::GetEmpty();
+	CHECK_ANIM_RET_EMPTY();
+	return FText::AsNumber(CachedAnimInstance->GetLocomotionData().GroundSpeed);
 }
 
-FText SLocomotionDebugger::GetAnimWeaponStyle() const
+FText SLocomotionDebugger::GetLoco_Velocity() const
 {
-	if (CachedAnimInstance.IsValid())
-	{
-		int32 Val = GetIntProperty(CachedAnimInstance.Get(), TEXT("WeaponStyle"));
-		return FText::AsNumber(Val);
-	}
-	return FText::GetEmpty();
+	CHECK_ANIM_RET_EMPTY();
+	const FVector& Vel = CachedAnimInstance->GetLocomotionData().Velocity;
+	return FText::FromString(FString::Printf(TEXT("X:%.1f Y:%.1f Z:%.1f"), Vel.X, Vel.Y, Vel.Z));
 }
 
-FText SLocomotionDebugger::GetAnimCombatState() const
+FText SLocomotionDebugger::GetLoco_InputAcceleration() const
 {
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsInCombat")));
-	return FText::GetEmpty();
+	CHECK_ANIM_RET_EMPTY();
+	const FVector& Acc = CachedAnimInstance->GetLocomotionData().InputAcceleration;
+	return FText::FromString(FString::Printf(TEXT("X:%.1f Y:%.1f"), Acc.X, Acc.Y));
 }
 
-// --- Location ---
-FText SLocomotionDebugger::GetAnimWorldLocation() const
+FText SLocomotionDebugger::GetLoco_Direction() const
 {
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetVectorPropertyAsString(CachedAnimInstance.Get(), TEXT("WorldLocation")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimDisplacementSpeed() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("DisplacementSpeed")));
-	return FText::GetEmpty();
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetLocomotionData();
+	return FText::FromString(FString::Printf(TEXT("Cur: %.1f  (Last: %.1f)"), 
+		Data.LocomotionDirection, Data.LastLocomotionDirection));
 }
 
-// --- Rotation ---
-FText SLocomotionDebugger::GetAnimWorldRotation() const
+FText SLocomotionDebugger::GetLoco_WorldRotation() const
 {
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetRotatorPropertyAsString(CachedAnimInstance.Get(), TEXT("WorldRotation")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimYawDeltaSpeed() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("YawDeltaSpeed")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimAdditiveLeanAngle() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("AdditiveLeanAngle")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimRootYawOffset() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("RootYawOffset")));
-	return FText::GetEmpty();
+	CHECK_ANIM_RET_EMPTY();
+	return FText::FromString(CachedAnimInstance->GetLocomotionData().WorldRotation.ToString());
 }
 
-// --- Velocity ---
-FText SLocomotionDebugger::GetAnimWorldVelocity() const
+FText SLocomotionDebugger::GetLoco_MovementFlags() const
 {
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetVectorPropertyAsString(CachedAnimInstance.Get(), TEXT("WorldVelocity")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimLocalVelocity2D() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetVectorPropertyAsString(CachedAnimInstance.Get(), TEXT("LocalVelocity2D")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimLocalVelocityDirAngle() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		float Angle = GetFloatProperty(CachedAnimInstance.Get(), TEXT("LocalVelocityDirectionAngle"));
-		float AngleWithOffset = GetFloatProperty(CachedAnimInstance.Get(), TEXT("LocalVelocityDirectionAngleWithOffset"));
-		return FText::FromString(FString::Printf(TEXT("%.1f / %.1f"), AngleWithOffset, Angle));
-	}
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimLocalVelocityDir() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		FString Dir = GetEnumPropertyAsString(CachedAnimInstance.Get(), TEXT("LocalVelocityDirection"), TEXT("/Script/RPGSystem.ECardinalDirection"));
-		FString DirNoOffset = GetEnumPropertyAsString(CachedAnimInstance.Get(), TEXT("LocalVelocityDirectionNoOffset"), TEXT("/Script/RPGSystem.ECardinalDirection"));
-		return FText::FromString(FString::Printf(TEXT("%s (NoOff: %s)"), *Dir, *DirNoOffset));
-	}
-	return FText::GetEmpty();
-}
-
-// --- Acceleration ---
-FText SLocomotionDebugger::GetAnimLocalAcceleration2D() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetVectorPropertyAsString(CachedAnimInstance.Get(), TEXT("LocalAcceleration2D")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimPivotDirection() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetVectorPropertyAsString(CachedAnimInstance.Get(), TEXT("PivotDirection2D")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimCardinalDirFromAccel() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		return FText::FromString(GetEnumPropertyAsString(CachedAnimInstance.Get(), TEXT("CardinalDirectionFromAcceleration"), TEXT("/Script/RPGSystem.ECardinalDirection")));
-	}
-	return FText::GetEmpty();
-}
-
-// --- Character State ---
-FText SLocomotionDebugger::GetAnimMovementFlags() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		FString Move = GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bShouldMove"));
-		FString Fall = GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsFalling"));
-		FString Back = GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsMovingBackward"));
-		
-		return FText::FromString(FString::Printf(TEXT("ShouldMove: %s | Fall: %s | Back: %s"), *Move, *Fall, *Back));
-	}
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimStateFlags() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		TArray<FString> States;
-		auto CheckState = [&](const TCHAR* PropName, const TCHAR* Display)
-		{
-			if (GetBoolPropertyAsString(CachedAnimInstance.Get(), PropName) == TEXT("True"))
-			{
-				States.Add(Display);
-			}
-		};
-
-		CheckState(TEXT("IsOnGround"), TEXT("[Ground]"));
-		CheckState(TEXT("IsCrouching"), TEXT("[Crouch]"));
-		CheckState(TEXT("IsJumping"), TEXT("[Jump]"));
-		CheckState(TEXT("bIsSprint"), TEXT("[Sprint]"));
-		CheckState(TEXT("HasVelocity"), TEXT("[HasVel]"));
-		CheckState(TEXT("bHasAcceleration"), TEXT("[HasAccel]"));
-		CheckState(TEXT("IsRunningIntoWall"), TEXT("[Wall]"));
-		CheckState(TEXT("CrouchStateChange"), TEXT("[CrouchChg]"));
-
-		if (States.Num() == 0) return FText::FromString(TEXT("None"));
-		return FText::FromString(FString::Join(States, TEXT(" ")));
-	}
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimTimeSinceFired() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("TimeSinceFiredWeapon")));
-	return FText::GetEmpty();
-}
-
-// --- Jump / Fall ---
-FText SLocomotionDebugger::GetAnimTimeToJumpApex() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("TimeToJumpApex")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimTimeFalling() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("TimeFalling")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimGroundDistance() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("GroundDistance")));
-	return FText::GetEmpty();
-}
-FText SLocomotionDebugger::GetAnimLandingImpact() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("LandingImpactSpeed")));
-	return FText::GetEmpty();
-}
-
-// --- Aiming ---
-FText SLocomotionDebugger::GetAnimAiming() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		float Pitch = GetFloatProperty(CachedAnimInstance.Get(), TEXT("AimPitch"));
-		float Yaw = GetFloatProperty(CachedAnimInstance.Get(), TEXT("AimYaw"));
-		return FText::FromString(FString::Printf(TEXT("Pitch: %.1f / Yaw: %.1f"), Pitch, Yaw));
-	}
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimAimingFlags() const
-{
-	if (CachedAnimInstance.IsValid())
-	{
-		FString Aim = GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsAiming"));
-		FString Bow = GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsBowReady"));
-		return FText::FromString(FString::Printf(TEXT("Aiming: %s | BowReady: %s"), *Aim, *Bow));
-	}
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimAimBlend() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("AimBlendWeight")));
-	return FText::GetEmpty();
-}
-
-// --- Action & Guard (New!) ---
-FText SLocomotionDebugger::GetAnimPrimaryDown() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsPrimaryDown")));
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimPrimaryBlend() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("PrimaryBlendWeight")));
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimGuarding() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::FromString(GetBoolPropertyAsString(CachedAnimInstance.Get(), TEXT("bIsGuarding")));
-	return FText::GetEmpty();
-}
-
-FText SLocomotionDebugger::GetAnimGuardBlend() const
-{
-	if (CachedAnimInstance.IsValid()) return FText::AsNumber(GetFloatProperty(CachedAnimInstance.Get(), TEXT("GuardBlendWeight")));
-	return FText::GetEmpty();
-}
-
-// ====================================================================================
-// Reflection Helpers
-// ====================================================================================
-
-FString SLocomotionDebugger::GetEnumPropertyAsString(UObject* Obj, FName PropName, const TCHAR* EnumPath) const
-{
-	if (!Obj) return TEXT("None");
-	const UEnum* EnumPtr = FindObject<UEnum>(nullptr, EnumPath, true);
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetLocomotionData();
 	
-	FProperty* Prop = Obj->GetClass()->FindPropertyByName(PropName);
-	// Handle Byte Property (traditional Enums)
-	if (FByteProperty* ByteProp = CastField<FByteProperty>(Prop))
-	{
-		uint8 Val = ByteProp->GetPropertyValue_InContainer(Obj);
-		if (EnumPtr) return EnumPtr->GetNameStringByValue(Val);
-		return FString::FromInt(Val);
-	}
-	// Handle Enum Property (modern enum class)
-	else if (FEnumProperty* EnumProp = CastField<FEnumProperty>(Prop))
-	{
-		void* ValPtr = EnumProp->ContainerPtrToValuePtr<void>(Obj);
-		int64 Val = EnumProp->GetUnderlyingProperty()->GetSignedIntPropertyValue(ValPtr);
-		if (EnumPtr) return EnumPtr->GetNameStringByValue(Val);
-	}
-	return TEXT("Invalid");
+	FString S_Move = Data.bShouldMove ? TEXT("SHOULD MOVE") : TEXT("-");
+	FString S_Accel = Data.bHasAcceleration ? TEXT("HAS ACCEL") : TEXT("-");
+	FString S_Back = Data.bIsMovingBackward ? TEXT("BACKWARD") : TEXT("-");
+
+	return FText::FromString(FString::Printf(TEXT("[%s] [%s] [%s]"), *S_Move, *S_Accel, *S_Back));
 }
 
-FString SLocomotionDebugger::GetBoolPropertyAsString(UObject* Obj, FName PropName) const
+FText SLocomotionDebugger::GetLoco_StateFlags() const
 {
-	if (!Obj) return TEXT("false");
-	if (FBoolProperty* BoolProp = CastField<FBoolProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
-	{
-		return BoolProp->GetPropertyValue_InContainer(Obj) ? TEXT("True") : TEXT("False");
-	}
-	return TEXT("N/A");
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetLocomotionData();
+
+	FString S_Fall = Data.bIsFalling ? TEXT("FALLING") : TEXT("GROUND");
+	FString S_Crouch = Data.bIsCrouch ? TEXT("CROUCH") : TEXT("STAND");
+	FString S_Sprint = Data.bIsSprint ? TEXT("SPRINT") : TEXT("-");
+	FString S_Walk = Data.bIsWalking ? TEXT("WALK") : TEXT("RUN");
+
+	return FText::FromString(FString::Printf(TEXT("%s | %s | %s | %s"), *S_Fall, *S_Crouch, *S_Walk, *S_Sprint));
 }
 
-float SLocomotionDebugger::GetFloatProperty(UObject* Obj, FName PropName) const
+FText SLocomotionDebugger::GetLoco_LandingImpact() const
 {
-	if (!Obj) return 0.0f;
-	if (FDoubleProperty* DblProp = CastField<FDoubleProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
-	{
-		return (float)DblProp->GetPropertyValue_InContainer(Obj);
-	}
-	else if (FFloatProperty* FltProp = CastField<FFloatProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
-	{
-		return FltProp->GetPropertyValue_InContainer(Obj);
-	}
-	return 0.0f;
+	CHECK_ANIM_RET_EMPTY();
+	return FText::AsNumber(CachedAnimInstance->GetLocomotionData().LandingImpactSpeed);
 }
 
-int32 SLocomotionDebugger::GetIntProperty(UObject* Obj, FName PropName) const
+// ------------------------------------------------------------------------------------
+// [COMBAT DATA] Getters
+// ------------------------------------------------------------------------------------
+
+FText SLocomotionDebugger::GetCombat_IsInCombat() const
 {
-	if (!Obj) return 0;
-	if (FIntProperty* IntProp = CastField<FIntProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
-	{
-		return IntProp->GetPropertyValue_InContainer(Obj);
-	}
-	return 0;
+	CHECK_ANIM_RET_EMPTY();
+	return CachedAnimInstance->GetCombatData().bIsInCombat ? FText::FromString(TEXT("TRUE (Combat Mode)")) : FText::FromString(TEXT("FALSE (Peace Mode)"));
 }
 
-FString SLocomotionDebugger::GetVectorPropertyAsString(UObject* Obj, FName PropName) const
+FText SLocomotionDebugger::GetCombat_OverlayState() const
 {
-	if (!Obj) return TEXT("0, 0, 0");
-	if (FStructProperty* StructProp = CastField<FStructProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
+	CHECK_ANIM_RET_EMPTY();
+	const UEnum* EnumPtr = StaticEnum<ECharacterOverlayState>();
+	if (EnumPtr)
 	{
-		if (StructProp->Struct == TBaseStructure<FVector>::Get())
-		{
-			FVector* ValPtr = StructProp->ContainerPtrToValuePtr<FVector>(Obj);
-			if (ValPtr) return ValPtr->ToString();
-		}
+		return EnumPtr->GetDisplayNameTextByValue((int64)CachedAnimInstance->GetCombatData().OverlayState);
 	}
-	return TEXT("N/A");
+	return FText::FromString("Unknown");
 }
 
-FString SLocomotionDebugger::GetRotatorPropertyAsString(UObject* Obj, FName PropName) const
+FText SLocomotionDebugger::GetCombat_WeaponStyle() const
 {
-	if (!Obj) return TEXT("0, 0, 0");
-	if (FStructProperty* StructProp = CastField<FStructProperty>(Obj->GetClass()->FindPropertyByName(PropName)))
-	{
-		if (StructProp->Struct == TBaseStructure<FRotator>::Get())
-		{
-			FRotator* ValPtr = StructProp->ContainerPtrToValuePtr<FRotator>(Obj);
-			if (ValPtr) return ValPtr->ToString();
-		}
-	}
-	return TEXT("N/A");
+	CHECK_ANIM_RET_EMPTY();
+	return FText::AsNumber(CachedAnimInstance->GetCombatData().WeaponStyle);
 }
+
+FText SLocomotionDebugger::GetCombat_AimOffset() const
+{
+	CHECK_ANIM_RET_EMPTY();
+	const FRotator& Aim = CachedAnimInstance->GetCombatData().AimOffset;
+	return FText::FromString(FString::Printf(TEXT("P: %.1f / Y: %.1f"), Aim.Pitch, Aim.Yaw));
+}
+
+FText SLocomotionDebugger::GetCombat_AimBlendWeight() const
+{
+	CHECK_ANIM_RET_EMPTY();
+	return FText::AsNumber(CachedAnimInstance->GetCombatData().AimBlendWeight);
+}
+
+FText SLocomotionDebugger::GetCombat_AimFlags() const
+{
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetCombatData();
+	FString Aim = Data.bIsAiming ? TEXT("AIMING") : TEXT("-");
+	FString Bow = Data.bIsBowReady ? TEXT("BOW READY") : TEXT("-");
+	return FText::FromString(FString::Printf(TEXT("[%s]  [%s]"), *Aim, *Bow));
+}
+
+FText SLocomotionDebugger::GetCombat_PrimaryAction() const
+{
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetCombatData();
+	FString Down = Data.bIsPrimaryDown ? TEXT("DOWN") : TEXT("UP");
+	return FText::FromString(FString::Printf(TEXT("%s (Blend: %.2f)"), *Down, Data.PrimaryBlendWeight));
+}
+
+FText SLocomotionDebugger::GetCombat_GuardAction() const
+{
+	CHECK_ANIM_RET_EMPTY();
+	const auto& Data = CachedAnimInstance->GetCombatData();
+	FString Guard = Data.bIsGuarding ? TEXT("GUARDING") : TEXT("-");
+	return FText::FromString(FString::Printf(TEXT("%s (Blend: %.2f)"), *Guard, Data.GuardBlendWeight));
+}
+
+// ------------------------------------------------------------------------------------
+// Unused / Deprecated Reflection Helpers (Header compatibility)
+// ------------------------------------------------------------------------------------
+FString SLocomotionDebugger::GetEnumPropertyAsString(UObject* Obj, FName PropName, const TCHAR* EnumPath) const { return ""; }
+FString SLocomotionDebugger::GetBoolPropertyAsString(UObject* Obj, FName PropName) const { return ""; }
+float SLocomotionDebugger::GetFloatProperty(UObject* Obj, FName PropName) const { return 0.0f; }
+int32 SLocomotionDebugger::GetIntProperty(UObject* Obj, FName PropName) const { return 0; }
+FString SLocomotionDebugger::GetVectorPropertyAsString(UObject* Obj, FName PropName) const { return ""; }
+FString SLocomotionDebugger::GetRotatorPropertyAsString(UObject* Obj, FName PropName) const { return ""; }
 
 #undef LOCTEXT_NAMESPACE

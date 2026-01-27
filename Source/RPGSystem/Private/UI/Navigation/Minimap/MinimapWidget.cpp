@@ -27,7 +27,7 @@ void UMinimapWidget::NativePreConstruct()
 	
 	if(Img_Map)
 	{
-		if (IsDesignTime())
+		if (IsDesignTime() && bShowImageInDesignTime)
 		{
 			Img_Map->SetVisibility(ESlateVisibility::Collapsed);
 		}
@@ -37,8 +37,18 @@ void UMinimapWidget::NativePreConstruct()
 		}
 	}
 
-	IsActive = false;
-	IsActive ? SetRenderOpacity(1.f) : SetRenderOpacity(0.f);
+	if (IsDesignTime())
+	{
+		// 에디터에서는 작업해야 하니 투명도 1.0 (완전 불투명)
+		SetRenderOpacity(1.f);
+		IsActive = true; 
+	}
+	else
+	{
+		// 실제 게임 시작 시에는 꺼진 상태(투명)로 시작
+		IsActive = false;
+		SetRenderOpacity(0.f);
+	}
 	
 	if(RotateMinimapWithPlayer)
 	{

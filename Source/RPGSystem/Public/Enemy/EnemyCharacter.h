@@ -6,6 +6,13 @@
 #include "GameFramework/Character.h"
 #include "EnemyCharacter.generated.h"
 
+class UActionComponent;
+class UCombatComponent;
+class UAIPerceptionStimuliSourceComponent;
+
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyDamaged, float, Damage, AActor*, DamageInstigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
+
 UCLASS()
 class RPGSYSTEM_API AEnemyCharacter : public ACharacter, public IActionOwner
 {

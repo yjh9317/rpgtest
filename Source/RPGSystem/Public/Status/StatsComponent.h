@@ -4,61 +4,12 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "StatData.h"
 #include "Components/ActorComponent.h"
 #include "Net/Serialization/FastArraySerializer.h"
 #include "StatsComponent.generated.h"
 
 class UDataAsset_StatConfig;
-
-UENUM(BlueprintType)
-enum class EStatModifierType : uint8
-{
-	Flat,        // +10 Attack
-	Percentage,  // +20% Speed
-	Override     // = 100 (최종값 강제)
-};
-
-USTRUCT(BlueprintType)
-struct FStatModifier
-{
-	GENERATED_BODY()
-
-	UPROPERTY()
-	FGameplayTag ModifierTag;  // 고유 ID (아이템 ID, 버프 ID)
-
-	UPROPERTY()
-	EStatModifierType ModifierType = EStatModifierType::Flat;
-
-	UPROPERTY()
-	float ModifierValue = 0.0f;
-
-	UPROPERTY()
-	float Duration = -1.0f;  // -1 = 영구
-
-	UPROPERTY()
-	float StartTime = 0.0f;
-
-	UPROPERTY()
-	int32 Priority = 0;  // 적용 순서 (낮을수록 먼저)
-
-	FStatModifier() = default;
-
-	FStatModifier(const FGameplayTag& InTag, float InValue, 
-		EStatModifierType InType = EStatModifierType::Flat, float InDuration = -1.0f)
-		: ModifierTag(InTag), ModifierType(InType), ModifierValue(InValue), Duration(InDuration)
-	{}
-
-	bool IsExpired(float CurrentTime) const
-	{
-		return Duration > 0.0f && (CurrentTime >= StartTime + Duration);
-	}
-
-	float GetRemainingTime(float CurrentTime) const
-	{
-		if (Duration <= 0.0f) return -1.0f;
-		return FMath::Max(0.0f, StartTime + Duration - CurrentTime);
-	}
-};
 
 // FFastArraySerializerItem : 이것을 상속받으면, 각 항목은 네트워크 복제를 위한 **고유 ID(ReplicationID)**와 **변경 이력(ReplicationKey)**을 내부적으로 갖게 됨
 // 시스템은 이 값들을 비교해서 어떤 항목이 변경되었는지 빠르게 파악
@@ -112,13 +63,13 @@ public:
 		{
 			switch (Mod.ModifierType)
 			{
-			case EStatModifierType::Flat:
+			case EModifierSourceType::Flat:
 				FlatBonus += Mod.ModifierValue;
 				break;
-			case EStatModifierType::Percentage:
+			case EModifierSourceType::Percentage:
 				PercentBonus *= (1.0f + Mod.ModifierValue);
 				break;
-			case EStatModifierType::Override:
+			case EModifierSourceType::Override:
 				FinalValue = Mod.ModifierValue;
 				return;  // Override는 다른 Modifier 무시
 			}
@@ -230,9 +181,9 @@ public:
 	void RemoveAllModifiers(const FGameplayTag& StatTag);
 	TArray<FStatModifier> GetStatModifiers(const FGameplayTag& StatTag) const;
 	
-	void AddItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID,float BonusValue, EStatModifierType ModifierType = EStatModifierType::Flat);
+	void AddItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID,float BonusValue, EModifierSourceType ModifierType = EModifierSourceType::Flat);
 	void RemoveItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID);
-	void AddTemporaryStatBuff(const FGameplayTag& StatTag, const FGameplayTag& BuffID,float BonusValue, float Duration,EStatModifierType ModifierType = EStatModifierType::Flat);
+	void AddTemporaryStatBuff(const FGameplayTag& StatTag, const FGameplayTag& BuffID,float BonusValue, float Duration,EModifierSourceType ModifierType = EModifierSourceType::Flat);
 	void RemoveStatBuff(const FGameplayTag& StatTag, const FGameplayTag& BuffID);
 
 	/**

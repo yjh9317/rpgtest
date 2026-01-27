@@ -25,7 +25,6 @@ public:
 	
 	virtual void SynchronizeProperties() override;
 	
-	
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	FGuid CurrentInventoryGuid;
 protected:

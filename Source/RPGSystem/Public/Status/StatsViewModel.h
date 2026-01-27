@@ -24,7 +24,7 @@ public:
 	 * ViewModel 초기화
 	 * @param InStatsComponent 연결할 StatsComponent
 	 */
-	void Initialize(UStatsComponent* InStatsComponent);
+	void InitializeStats(UStatsComponent* InStatsComponent);
 	
 	/**
 	 * ViewModel 정리 및 델리게이트 해제

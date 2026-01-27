@@ -5,8 +5,11 @@
 
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
+#include "DamageFloat/DamageFloatManagerComponent.h"
 #include "HUD/RPGHUDWidget.h"
+#include "Input/RPGInputFunctionLibrary.h"
 #include "Interaction/Interface/InteractableInterface.h"
 #include "Inventory/InventoryCoreComponent.h"
 #include "Inventory/UI/PlayerInventoryWidget.h"
@@ -15,9 +18,15 @@
 #include "SaveSystem/Async/RPGAsyncLoadGame.h"
 #include "SaveSystem/Async/RPGAsyncSaveGame.h"
 #include "SaveSystem/SaveGame/InfoSaveGame.h"
+#include "SaveSystem/SaveGame/RPGSettingsSaveGame.h"
 #include "SaveSystem/Subsystem/RPGSaveSubsystem.h"
 #include "Status/StatsComponent.h"
 #include "Status/StatsViewModel.h"
+
+ARPGPlayerController::ARPGPlayerController()
+{
+	DamageFloatManagerComponent = CreateDefaultSubobject<UDamageFloatManagerComponent>(TEXT("DamageFloatManagerComponent"));
+}
 
 void ARPGPlayerController::BeginPlay()
 {
@@ -37,29 +46,30 @@ void ARPGPlayerController::BeginPlay()
 	
 	if (HUDWidgetClass && IsLocalController())
 	{
-		HUDWidgetInstance = CreateWidget<URPGHUDWidget>(this, HUDWidgetClass);
-		if (HUDWidgetInstance)
+		HUDWidget = CreateWidget<URPGHUDWidget>(this, HUDWidgetClass);
+		if (HUDWidget)
 		{
-			HUDWidgetInstance->AddToViewport(); // Z-Order를 낮게 설정 (인벤토리보다 뒤에)
-			HUDWidgetInstance->InitializeHUD(GetPawn());
+			HUDWidget->AddToViewport(); // Z-Order를 낮게 설정 (인벤토리보다 뒤에)
+			HUDWidget->InitializeHUD(GetPawn());
 		}
 	}
 	
-	// 2. ViewModel 연결 (StatsComponent가 Pawn에 있다고 가정)
-	APawn* ControlledPawn = GetPawn();
-	if (ControlledPawn)
+	if (HUDWidgetClass)
 	{
-		UStatsComponent* StatsComp = ControlledPawn->FindComponentByClass<UStatsComponent>();
-		if (StatsComp)
+		HUDWidget = CreateWidget<URPGHUDWidget>(this, HUDWidgetClass);
+        
+		UStatsViewModel* VM = NewObject<UStatsViewModel>(this);
+		APawn* MyPawn = GetPawn();
+		if (MyPawn)
 		{
-			StatsViewModel = NewObject<UStatsViewModel>(this);
-			StatsViewModel->Initialize(StatsComp);
-
-			if (HUDWidgetInstance)
+			UStatsComponent* StatsComp = MyPawn->FindComponentByClass<UStatsComponent>();
+			if (StatsComp)
 			{
-				HUDWidgetInstance->BindStatsModel(StatsViewModel);
+				VM->InitializeStats(StatsComp);
 			}
 		}
+        
+		HUDWidget->SetViewModel(VM);
 	}
 }
 
@@ -83,9 +93,9 @@ void ARPGPlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 	
-	if (HUDWidgetInstance)
+	if (HUDWidget)
 	{
-		HUDWidgetInstance->InitializeHUD(InPawn);
+		HUDWidget->InitializeHUD(InPawn);
 		// ViewModel 재연결 로직 등...
 	}
 }
@@ -213,6 +223,46 @@ void ARPGPlayerController::TestLoadGame()
 			UE_LOG(LogTemp, Log, TEXT("Async Load Task Started..."));
 		}
 	}
+}
+
+void ARPGPlayerController::ApplySavedInputSettings()
+{
+	URPGSettingsSaveGame* Settings = Cast<URPGSettingsSaveGame>(UGameplayStatics::LoadGameFromSlot("GlobalSettings", 0));
+	if (!Settings) return; // 저장된 게 없으면 기본값 사용
+
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
+	if (!Subsystem || !InputMappingContext) return;
+
+	// 3. 저장된 WASD(Axis) 오버라이드 적용
+	for (const auto& Pair : Settings->AxisKeyOverrides)
+	{
+		FKey OriginalKey = Pair.Key;
+		FKey NewKey = Pair.Value;
+
+		const UInputAction* TargetAction = nullptr;
+    
+		for (const FEnhancedActionKeyMapping& Mapping : InputMappingContext->GetMappings())
+		{
+			if (Mapping.Key == OriginalKey)
+			{
+				TargetAction = Mapping.Action;
+				break;
+			}
+		}
+
+		// 대상 액션이 있다면, 라이브러리 함수를 통해 안전하게 키를 교체합니다.
+		// (RebindKey 함수 내부에서 Unmap -> MapKey 과정을 처리해줍니다)
+		if (TargetAction)
+		{
+			URPGInputFunctionLibrary::RebindKey(this, InputMappingContext, TargetAction, OriginalKey, NewKey);
+		}
+	}
+
+	// 4. 일반 액션 매핑 적용 (ActionMappings 순회)
+	// ... (유사한 로직으로 구현)
+
+	// 5. 최종 갱신
+	Subsystem->AddMappingContext(InputMappingContext, 1);
 }
 
 void ARPGPlayerController::PreSave(FObjectPreSaveContext SaveContext)

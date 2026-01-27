@@ -87,6 +87,7 @@ void UPlayerAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
     LocomotionData.WorldRotation = Character->GetActorRotation();
     LocomotionData.Velocity = CharacterMovement->Velocity;
     LocomotionData.GroundSpeed = LocomotionData.Velocity.Size2D();
+	LocomotionData.InputAcceleration = CharacterMovement->GetCurrentAcceleration();
     LocomotionData.bHasAcceleration = (CharacterMovement->GetCurrentAcceleration().SizeSquared2D() > 0.0f);
     
     // Should Move 판단
@@ -107,32 +108,37 @@ void UPlayerAnimInstance::NativeThreadSafeUpdateAnimation(float DeltaSeconds)
     // =========================================================
     // [핵심 변경 구간] 방향 및 워핑 계산 (LocomotionDirection)
     // =========================================================
-    if (LocomotionData.bShouldMove)
-    {
-       LocomotionData.LastLocomotionDirection = LocomotionData.LocomotionDirection;
-       
-       // (A) 조준(Aiming) 중: 스트레이프 모드
-       // 실제 이동 방향과 몸(카메라) 각도 차이를 계산 -> BlendSpace (-180 ~ 180) 적용
-       if (bCurrentAiming)
-       {
-           FRotator VelocityRot = LocomotionData.Velocity.ToOrientationRotator();
-           LocomotionData.LocomotionDirection = UKismetMathLibrary::NormalizedDeltaRotator(VelocityRot, Character->GetActorRotation()).Yaw;
-       }
-       // (B) 탐험(Exploration) 중: 오리엔트 모드
-       // 캐릭터가 물리적으로 회전하므로, 다리는 '앞(0)'으로 고정 -> 자연스럽게 회전하며 달림
-       else
-       {
-           // 0으로 바로 꽂아도 되지만, Aim -> NotAim 전환 시 부드럽게 풀리도록 보간
-           LocomotionData.LocomotionDirection = FMath::FInterpTo(LocomotionData.LocomotionDirection, 0.0f, DeltaSeconds, 5.0f);
-       }
-    }
-    else
-    {
-        // 멈춰있을 땐 방향 0 (혹은 이전 값 유지)
-        LocomotionData.LocomotionDirection = 0.0f; 
-    }
+	if (LocomotionData.bShouldMove)
+	{
+		// 이전 프레임의 방향 저장 (필요 시 사용)
+		LocomotionData.LastLocomotionDirection = LocomotionData.LocomotionDirection;
+
+		// 현재 이동하려는 방향(TargetDirection) 계산 (-180 ~ 180)
+		FRotator VelocityRot = LocomotionData.Velocity.ToOrientationRotator();
+		float TargetDirection = UKismetMathLibrary::NormalizedDeltaRotator(VelocityRot, Character->GetActorRotation()).Yaw;
+
+		// (A) 조준(Aiming): 스트레이프 모드
+		if (bCurrentAiming)
+		{
+			FRotator CurrentRot = FRotator(0.0f, LocomotionData.LocomotionDirection, 0.0f);
+			FRotator TargetRot  = FRotator(0.0f, TargetDirection, 0.0f);
+
+			FRotator NewRot = FMath::RInterpTo(CurrentRot, TargetRot, DeltaSeconds, 15.0f);
+			LocomotionData.LocomotionDirection = FRotator::NormalizeAxis(NewRot.Yaw);
+		}
+		// (B) 탐험(Exploration): 일반 이동
+		else
+		{
+			float ExploreTarget = 0.0f; 
+			LocomotionData.LocomotionDirection = FMath::FInterpTo(
+				LocomotionData.LocomotionDirection, 
+				ExploreTarget, 
+				DeltaSeconds, 
+				5.0f
+			);
+		}
+	}
     
-    // 후진 판단
     LocomotionData.bIsMovingBackward = (FMath::Abs(LocomotionData.LocomotionDirection) > 130.0f);
 
     // 블렌드 웨이트 계산

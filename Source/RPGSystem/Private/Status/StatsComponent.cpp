@@ -384,7 +384,7 @@ TArray<FStatModifier> UStatsComponent::GetStatModifiers(const FGameplayTag& Stat
 }
 
 void UStatsComponent::AddItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID, float BonusValue,
-	EStatModifierType ModifierType)
+	EModifierSourceType ModifierType)
 {
 	FStatModifier Modifier(ItemID, BonusValue, ModifierType, -1.0f);  // 영구
 	AddStatModifier(StatTag, Modifier);
@@ -396,7 +396,7 @@ void UStatsComponent::RemoveItemStatBonus(const FGameplayTag& StatTag, const FGa
 }
 
 void UStatsComponent::AddTemporaryStatBuff(const FGameplayTag& StatTag, const FGameplayTag& BuffID, float BonusValue,
-	float Duration, EStatModifierType ModifierType)
+	float Duration, EModifierSourceType ModifierType)
 {
 	FStatModifier Modifier(BuffID, BonusValue, ModifierType, Duration);
 	AddStatModifier(StatTag, Modifier);

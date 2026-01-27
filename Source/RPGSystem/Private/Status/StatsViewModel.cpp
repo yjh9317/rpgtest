@@ -8,7 +8,7 @@ UStatsViewModel::UStatsViewModel()
 {
 }
 
-void UStatsViewModel::Initialize(UStatsComponent* InStatsComponent)
+void UStatsViewModel::InitializeStats(UStatsComponent* InStatsComponent)
 {
 	if (!InStatsComponent)
 	{

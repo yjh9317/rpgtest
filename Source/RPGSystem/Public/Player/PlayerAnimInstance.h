@@ -26,6 +26,9 @@ struct FRPGAnimLocomotionData
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	FVector Velocity = FVector::ZeroVector;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	FVector InputAcceleration = FVector::ZeroVector;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	float GroundSpeed = 0.0f;
@@ -126,7 +129,8 @@ class RPGSYSTEM_API UPlayerAnimInstance : public UAnimInstance
 public:
 	virtual void NativeThreadSafeUpdateAnimation(float DeltaSeconds) override;
 	virtual void NativeInitializeAnimation() override;
-	
+	const FRPGAnimLocomotionData& GetLocomotionData() const { return LocomotionData; }
+	const FRPGAnimCombatData& GetCombatData() const { return CombatData; }
 protected:
 	UFUNCTION()
 	void OnEquipmentUpdated(FGameplayTag SlotTag, const UItemInstance* ItemInstance);
