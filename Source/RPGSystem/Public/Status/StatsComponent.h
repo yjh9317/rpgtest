@@ -70,7 +70,7 @@ public:
 				PercentBonus *= (1.0f + Mod.ModifierValue);
 				break;
 			case EModifierSourceType::Override:
-				FinalValue = Mod.ModifierValue;
+				CurrentValue = FMath::Max(0.0f, Mod.ModifierValue);
 				return;  // Override는 다른 Modifier 무시
 			}
 		}
@@ -128,7 +128,7 @@ class RPGSYSTEM_API UStatsComponent : public UActorComponent
 public:
 	UStatsComponent();
 	void OnStatsReplicated();
-	
+
 	UPROPERTY(BlueprintAssignable)
 	FOnStatChanged OnStatChanged;
 
@@ -148,17 +148,16 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FGameplayTag, int32> StatIndexCache;
 
-	UPROPERTY(Transient)
-	TMap<FGameplayTag, FTimerHandle> ModifierTimers;
 
 	UPROPERTY(EditDefaultsOnly,Category= "Stat | Data")
 	TObjectPtr<UDataAsset_StatConfig> DataAsset_StatConfig;
-	
+
 	UPROPERTY(Transient)
 	TObjectPtr<ACharacter> OwnerCharacter;
-	
+
 private:
 	FTimerHandle StatRecalculationTimer;
+	FTimerHandle ModifierCleanupTimer;
 	bool bNeedsStatRecalculation = false;
 
 public:
@@ -175,12 +174,12 @@ public:
 	TArray<FGameplayTag> GetAllStatTags() const;
 
 #pragma endregion
-	
+
 	void AddStatModifier(const FGameplayTag& StatTag, const FStatModifier& Modifier);
 	void RemoveStatModifier(const FGameplayTag& StatTag, const FGameplayTag& ModifierTag);
 	void RemoveAllModifiers(const FGameplayTag& StatTag);
 	TArray<FStatModifier> GetStatModifiers(const FGameplayTag& StatTag) const;
-	
+
 	void AddItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID,float BonusValue, EModifierSourceType ModifierType = EModifierSourceType::Flat);
 	void RemoveItemStatBonus(const FGameplayTag& StatTag, const FGameplayTag& ItemID);
 	void AddTemporaryStatBuff(const FGameplayTag& StatTag, const FGameplayTag& BuffID,float BonusValue, float Duration,EModifierSourceType ModifierType = EModifierSourceType::Flat);
@@ -209,6 +208,6 @@ private:
 	void RebuildStatCache();
 	// void RecalculateStat(const FGameplayTag& StatTag);
 	void CleanupExpiredModifiers();
-	void SetupModifierTimer(const FGameplayTag& StatTag, float Duration);
-	void OnModifierExpired(FGameplayTag StatTag);
+	void EnsureModifierCleanupTimerRunning();
+	void StopModifierCleanupTimerIfUnused();
 };

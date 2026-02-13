@@ -67,6 +67,7 @@ void UActionComponent::AddAction(AActor* Instigator, TSubclassOf<UBaseAction> Ac
     }
 
     UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionClass);
+    NewAction->OnActionEnded.BindUObject(this, &UActionComponent::OnActionCompleted);
     NewAction->Initialize(Instigator, SourceObject);
     ActionInstances.Add(ActionTag, NewAction);
 
@@ -104,6 +105,7 @@ void UActionComponent::RemoveActionsBySource(UObject* SourceObject)
                 if (Def.ActionTag == Tag && Def.ActionClass)
                 {
                     UBaseAction* NewAction = NewObject<UBaseAction>(this, Def.ActionClass);
+                    NewAction->OnActionEnded.BindUObject(this, &UActionComponent::OnActionCompleted);
                     NewAction->Initialize(GetOwner()); // SourceObject 없음 (기본으로 복귀)
                     NewAction->ActionTag = Def.ActionTag;
                     
@@ -138,6 +140,7 @@ void UActionComponent::RegisterAction(const FGameplayTag& ActionTag, TSubclassOf
     }
 
     UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionClass);
+    NewAction->OnActionEnded.BindUObject(this, &UActionComponent::OnActionCompleted);
     NewAction->Initialize(GetOwner());
     NewAction->ActionTag = ActionTag;
     
@@ -188,33 +191,60 @@ bool UActionComponent::ExecuteAction(const FGameplayTag& ActionTag)
         return Action->ProcessInput(); 
     }
 
-    // 활성 상태가 아니라면 새로 실행
-    ActiveActions.AddUnique(Action);
+    if (!CheckTagRequirements(Action) || !Action->CanExecute())
+    {
+        return false;
+    }
+
     Action->Execute();
 
-    return true;
+    if (Action->IsActive())
+    {
+        ActiveActions.AddUnique(Action);
+
+        if (Action->bWantsTick)
+        {
+            TickingActions.AddUnique(Action);
+        }
+
+        OnActionExecutedEvent.Broadcast(ActionTag);
+        return true;
+    }
+
+    return false;
 }
 
 bool UActionComponent::ExecuteActionInstance(UBaseAction* Action)
 {
+    if (!Action)
+    {
+        return false;
+    }
+
     if (ActiveActions.Contains(Action))
     {
-        Action->Execute();
-        return true;
+        return Action->ProcessInput();
     }
     
     // 새로운 액션
     if (!Action->CanExecute())
         return false;
 
-    ActiveActions.AddUnique(Action);
     Action->Execute();
+
+    if (!Action->IsActive())
+    {
+        return false;
+    }
+
+    ActiveActions.AddUnique(Action);
     
     if (Action->bWantsTick)
     {
         TickingActions.AddUnique(Action);
     }
-       
+
+    OnActionExecutedEvent.Broadcast(Action->GetActionTag());
     return true;
 }
 
@@ -229,6 +259,7 @@ void UActionComponent::InterruptAction(const FGameplayTag& ActionTag)
 
     Action->Interrupt();
     ActiveActions.Remove(Action);
+    OnActionInterruptedEvent.Broadcast(ActionTag);
 
     UE_LOG(LogTemp, Log, TEXT("Interrupted action: %s"), *ActionTag.ToString());
 }
@@ -300,6 +331,7 @@ void UActionComponent::CreateActionInstances()
         if (ActionInstances.Contains(ActionDef.ActionTag)) continue;
 
         UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionDef.ActionClass);
+        NewAction->OnActionEnded.BindUObject(this, &UActionComponent::OnActionCompleted);
         NewAction->Initialize(GetOwner()); // SourceObject는 nullptr (기본 스킬이므로)
         NewAction->ActionTag = ActionDef.ActionTag;
 
@@ -317,6 +349,8 @@ void UActionComponent::OnActionCompleted(UBaseAction* Action)
     {
         TickingActions.Remove(Action);
     }
+
+    OnActionCompletedEvent.Broadcast(Action->GetActionTag());
 }
 
 

@@ -40,6 +40,15 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Tags")
     FGameplayTagContainer ActiveTags;
 public:
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionExecuted OnActionExecutedEvent;
+
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionCompleted OnActionCompletedEvent;
+
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionInterrupted OnActionInterruptedEvent;
+
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 

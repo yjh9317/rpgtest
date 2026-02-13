@@ -3,6 +3,8 @@
 
 #include "Combat/Action/BaseAction.h"
 
+#include "Combat/Action/ActionOwner.h"
+#include "Combat/Action/Components/ActionComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -22,9 +24,16 @@ void UBaseAction::Initialize(AActor* NewActionOwner, UObject* NewSourceObject)
     OwnerCharacter = Cast<ACharacter>(NewActionOwner);
     SourceObject = NewSourceObject;
 
-    if (OwnerCharacter)
+    if (NewActionOwner && NewActionOwner->GetClass()->ImplementsInterface(UActionOwner::StaticClass()))
     {
+        CachedActionComponent = IActionOwner::Execute_GetActionComponent(NewActionOwner);
     }
+
+    if (!CachedActionComponent && NewActionOwner)
+    {
+        CachedActionComponent = NewActionOwner->FindComponentByClass<UActionComponent>();
+    }
+
     OnInitialized();
 }
 
@@ -57,13 +66,7 @@ void UBaseAction::Interrupt()
         return;
 
     OnInterrupt(); // 내부 로직(몽타주 정지 등) 처리
-
-    bIsActive = false;
-    RemoveGrantedTags();
-    StartCooldown();
-
-    // 컴포넌트에 알림
-    OnActionEnded.ExecuteIfBound(this);
+	EndAction(EActionEndReason::Interrupted);
 }
 
 void UBaseAction::Complete()
@@ -71,12 +74,8 @@ void UBaseAction::Complete()
     if (!bIsActive)
         return;
 
-    bIsActive = false;
-
-    RemoveGrantedTags();
-
     OnComplete();
-    // OnActionFinished.Broadcast();
+	EndAction(EActionEndReason::Completed);
 }
 
 bool UBaseAction::CanExecute() const
@@ -163,25 +162,36 @@ void UBaseAction::RefundResources(float Percentage)
 
 void UBaseAction::ApplyGrantedTags()
 {
-    // if (OwnerStateComponent && GrantedTags.Num() > 0)
-    // {
-    //     OwnerStateComponent->AddTags(GrantedTags);
-    //     UE_LOG(LogTemp, Verbose, TEXT("Applied granted tags for action %s"), *ActionTag.ToString());
-    // }
+	if (CachedActionComponent && GrantedTags.Num() > 0)
+	{
+		CachedActionComponent->AddTags(GrantedTags);
+	}
 }
 
 void UBaseAction::RemoveGrantedTags()
 {
-    // if (OwnerStateComponent && GrantedTags.Num() > 0)
-    // {
-    //     OwnerStateComponent->RemoveTags(GrantedTags);
-    //     UE_LOG(LogTemp, Verbose, TEXT("Removed granted tags for action %s"), *ActionTag.ToString());
-    // }
+	if (CachedActionComponent && GrantedTags.Num() > 0)
+	{
+		CachedActionComponent->RemoveTags(GrantedTags);
+	}
 }
 
 void UBaseAction::StartCooldown()
 {
     
+}
+
+void UBaseAction::EndAction(EActionEndReason EndReason)
+{
+	bIsActive = false;
+	RemoveGrantedTags();
+
+	if (EndReason == EActionEndReason::Completed || EndReason == EActionEndReason::Interrupted)
+	{
+		StartCooldown();
+	}
+
+	OnActionEnded.ExecuteIfBound(this);
 }
 
 APlayerController* UBaseAction::GetOwnerController() const
