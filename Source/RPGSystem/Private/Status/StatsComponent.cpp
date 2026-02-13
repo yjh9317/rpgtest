@@ -77,12 +77,8 @@ void UStatsComponent::BeginDestroy()
         // 재계산 타이머
         TimerManager.ClearTimer(StatRecalculationTimer);
         
-        // 모든 Modifier 타이머 정리
-        for (auto& Pair : ModifierTimers)
-        {
-            TimerManager.ClearTimer(Pair.Value);
-        }
-        ModifierTimers.Empty();
+        // Modifier 정리 타이머
+        TimerManager.ClearTimer(ModifierCleanupTimer);
     }
 
     // 캐시 정리
@@ -319,7 +315,7 @@ void UStatsComponent::AddStatModifier(const FGameplayTag& StatTag, const FStatMo
 
 	if (Modifier.Duration > 0.0f)
 	{
-		SetupModifierTimer(StatTag, Modifier.Duration);
+		EnsureModifierCleanupTimerRunning();
 	}
 	
 	OnStatModified.Broadcast(StatTag, Entry.BaseValue, Entry.CurrentValue);
@@ -366,12 +362,7 @@ void UStatsComponent::RemoveAllModifiers(const FGameplayTag& StatTag)
 		OnStatModified.Broadcast(StatTag, OldValue, Entry.CurrentValue);
 	}
 
-	// 타이머 정리
-	if (FTimerHandle* Timer = ModifierTimers.Find(StatTag))
-	{
-		GetWorld()->GetTimerManager().ClearTimer(*Timer);
-		ModifierTimers.Remove(StatTag);
-	}
+	StopModifierCleanupTimerIfUnused();
 }
 
 TArray<FStatModifier> UStatsComponent::GetStatModifiers(const FGameplayTag& StatTag) const
@@ -408,27 +399,44 @@ void UStatsComponent::RemoveStatBuff(const FGameplayTag& StatTag, const FGamepla
 }
 
 
-void UStatsComponent::SetupModifierTimer(const FGameplayTag& StatTag, float Duration)
+void UStatsComponent::EnsureModifierCleanupTimerRunning()
 {
-	if (FTimerHandle* ExistingTimer = ModifierTimers.Find(StatTag))
+	if (!GetWorld())
 	{
-		GetWorld()->GetTimerManager().ClearTimer(*ExistingTimer);
+		return;
 	}
 
-	FTimerHandle NewTimer;
-	GetWorld()->GetTimerManager().SetTimer(
-		NewTimer,
-		FTimerDelegate::CreateUObject(this, &UStatsComponent::OnModifierExpired, StatTag),
-		Duration,
-		false
-	);
-
-	ModifierTimers.Add(StatTag, NewTimer);
+	if (!GetWorld()->GetTimerManager().IsTimerActive(ModifierCleanupTimer))
+	{
+		GetWorld()->GetTimerManager().SetTimer(
+			ModifierCleanupTimer,
+			this,
+			&UStatsComponent::CleanupExpiredModifiers,
+			0.1f,
+			true
+		);
+	}
 }
 
-void UStatsComponent::OnModifierExpired(FGameplayTag StatTag)
+void UStatsComponent::StopModifierCleanupTimerIfUnused()
 {
-	CleanupExpiredModifiers();
+	if (!GetWorld())
+	{
+		return;
+	}
+
+	for (const FStatEntry& Entry : StatArray.Items)
+	{
+		for (const FStatModifier& Modifier : Entry.Modifiers)
+		{
+			if (Modifier.Duration > 0.0f)
+			{
+				return;
+			}
+		}
+	}
+
+	GetWorld()->GetTimerManager().ClearTimer(ModifierCleanupTimer);
 }
 
 void UStatsComponent::CleanupExpiredModifiers()
@@ -452,6 +460,8 @@ void UStatsComponent::CleanupExpiredModifiers()
 			OnStatModified.Broadcast(Entry.StatTag, OldValue, Entry.CurrentValue);
 		}
 	}
+
+	StopModifierCleanupTimerIfUnused();
 }
 
 

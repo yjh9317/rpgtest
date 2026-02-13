@@ -9,6 +9,7 @@ UCombatComponentBase::UCombatComponentBase()
 {
 	PrimaryComponentTick.bCanEverTick = true;
 	PrimaryComponentTick.TickInterval = 0.5f;  // 전투 타임아웃만 체크하므로 느린 틱
+	HealthStatTag = FGameplayTag::RequestGameplayTag(TEXT("Character.Stats.Health"), false);
 }
 
 void UCombatComponentBase::BeginPlay()
@@ -36,18 +37,26 @@ void UCombatComponentBase::TickComponent(float DeltaTime, ELevelTick TickType,
 // === ICombatable 구현 ===
 float UCombatComponentBase::GetCurrentHealth() const
 {
-	// TODO: StatsComponent 연동
-	// if (UStatsComponent* Stats = GetStatsComponent())
-	// {
-	//     return Stats->GetStat(FGameplayTag::RequestGameplayTag("Stat.Health"));
-	// }
-	return 100.f;  // 임시
+	if (UStatsComponent* Stats = GetStatsComponent())
+	{
+		if (HealthStatTag.IsValid() && Stats->HasStat(HealthStatTag))
+		{
+			return Stats->GetStatValue(HealthStatTag);
+		}
+	}
+	return 100.f;
 }
 
 float UCombatComponentBase::GetMaxHealth() const
 {
-	// TODO: StatsComponent 연동
-	return 100.f;  // 임시
+	if (UStatsComponent* Stats = GetStatsComponent())
+	{
+		if (HealthStatTag.IsValid() && Stats->HasStat(HealthStatTag))
+		{
+			return Stats->GetMaxStatValue(HealthStatTag);
+		}
+	}
+	return 100.f;
 }
 
 float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
@@ -66,11 +75,13 @@ float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 	}
 
 	// HP 감소
-	// TODO: StatsComponent 연동
-	// if (UStatsComponent* Stats = GetStatsComponent())
-	// {
-	//     Stats->ModifyStat(FGameplayTag::RequestGameplayTag("Stat.Health"), -FinalDamage);
-	// }
+	if (UStatsComponent* Stats = GetStatsComponent())
+	{
+		if (HealthStatTag.IsValid() && Stats->HasStat(HealthStatTag))
+		{
+			Stats->ModifyStatValue(HealthStatTag, -FinalDamage);
+		}
+	}
 
 	// 전투 상태 진입
 	if (DamageInfo.SourceActor.IsValid())

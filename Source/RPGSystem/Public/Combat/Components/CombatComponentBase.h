@@ -6,6 +6,7 @@
 #include "Combat/Combatable.h"
 #include "Combat/CombatData.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 #include "CombatComponentBase.generated.h"
 
 class UStatsComponent;
@@ -46,6 +47,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	bool bAutoLeaveCombat = true;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config", meta=(Categories="Character.Stats"))
+	FGameplayTag HealthStatTag;
 
 public:
 	// === 델리게이트 ===

@@ -12,6 +12,20 @@
 
 class URPGEffect;
 class UCueManagerSubsystem;
+class UStatsComponent;
+
+USTRUCT()
+struct FAppliedEffectDelta
+{
+    GENERATED_BODY()
+
+    UPROPERTY()
+    FGameplayTag StatTag;
+
+    UPROPERTY()
+    float AppliedDelta = 0.0f;
+};
+
 
 /**
  * Delegates for broadcasting effect events
@@ -57,6 +71,15 @@ protected:
     /** Cached reference to Cue Manager for playing effects */
     UPROPERTY()
     TObjectPtr<UCueManagerSubsystem> CueManager = nullptr;
+
+    /** Cached reference to stat component for effect stat modification */
+    UPROPERTY()
+    TObjectPtr<UStatsComponent> StatsComponent = nullptr;
+
+    /** Runtime mapping of effect instance -> applied stat modifier tags */
+    UPROPERTY(Transient)
+    TMap<FGuid, TArray<FAppliedEffectDelta>> AppliedEffectDeltas;
+
 
 public:
     // ========== LIFECYCLE ==========

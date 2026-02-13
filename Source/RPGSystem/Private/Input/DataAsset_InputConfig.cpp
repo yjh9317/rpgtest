@@ -20,3 +20,20 @@ const UInputAction* UDataAsset_InputConfig::FindNativeInputActionForTag(const FG
 
 	return nullptr;
 }
+const UInputAction* UDataAsset_InputConfig::FindAbilityInputActionForTag(const FGameplayTag& ActionTag, bool bLogNotFound) const
+{
+	for (const FAbilityInputConfig& AbilityConfig : AbilityInputActions)
+	{
+		if (AbilityConfig.ActionTag == ActionTag && AbilityConfig.InputAction)
+		{
+			return AbilityConfig.InputAction;
+		}
+	}
+
+	if (bLogNotFound)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Can't find AbilityInputAction for ActionTag [%s] on InputConfig [%s]"), *ActionTag.ToString(), *GetNameSafe(this));
+	}
+
+	return nullptr;
+}

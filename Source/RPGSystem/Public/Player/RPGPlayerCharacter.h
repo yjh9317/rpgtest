@@ -55,6 +55,7 @@ protected:
 	void Input_PrimaryAction(const FInputActionValue& Value);
 	void Input_SecondaryAction(const FInputActionValue& Value);
 	void Input_AbilityAction(const FInputActionValue& Value, FGameplayTag ActionTag);
+	void BindInputActions(class UCustomInputComponent* RPGInputComp);
 #pragma endregion InputFunc
 	
 #pragma region Toggle
@@ -107,6 +108,9 @@ public:
 #pragma endregion InterfaceFunc
 	
 #pragma region SetFunc
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void ApplyInputPreset(UDataAsset_InputConfig* NewInputConfig, UInputMappingContext* NewMappingContext);
+
 	UFUNCTION(BlueprintCallable, Category = "State")
 	void SetIsAiming(bool bAiming);
 	
