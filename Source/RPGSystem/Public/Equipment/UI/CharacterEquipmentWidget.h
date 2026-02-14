@@ -25,7 +25,7 @@ public:
 protected:
 	virtual void NativeConstruct() override;
 	virtual void NativeDestruct() override;
-
+	virtual void SynchronizeProperties() override;
 	UFUNCTION()
 	void OnEquipmentUpdated(FGameplayTag SlotTag, const UItemInstance* ItemInstance);
 

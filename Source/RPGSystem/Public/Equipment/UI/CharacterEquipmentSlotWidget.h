@@ -9,6 +9,7 @@
 #include "CharacterEquipmentSlotWidget.generated.h"
 
 
+class UTextBlock;
 class UButton;
 class UImage;
 class UEquipmentComponent;
@@ -27,7 +28,7 @@ protected:
 	virtual void NativeConstruct() override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
 	virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-
+	virtual void SynchronizeProperties() override;
 protected:
 	// [UI] 아이콘 이미지
 	UPROPERTY(meta = (BindWidget))
@@ -35,6 +36,12 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
 	FGameplayTag SlotTag;
+	
+	UPROPERTY(meta=(BindWidget))
+	TObjectPtr<UTextBlock> Txt_Slot;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
+	FText SlotText;
 
 	// 현재 표시 중인 아이템 (툴팁 등을 위해 캐싱)
 	UPROPERTY(BlueprintReadOnly, Category = "State")
@@ -42,4 +49,5 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UEquipmentComponent> EquipmentComp;
+
 };

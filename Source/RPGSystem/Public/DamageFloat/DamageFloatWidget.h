@@ -6,6 +6,7 @@
 #include "Blueprint/UserWidget.h"
 #include "DamageFloatWidget.generated.h"
 
+class UTextBlock;
 class UCanvasPanel;
 /**
  * 
@@ -15,9 +16,17 @@ class RPGSYSTEM_API UDamageFloatWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
-
-private:
+	// UI 바인딩
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UCanvasPanel> CP_DamageFloat;
+	UTextBlock* Txt_Damage;
+    
+	UPROPERTY(meta = (BindWidgetAnim), Transient)
+	UWidgetAnimation* FloatUpAnimation;
+    
+	// 데미지 설정 함수
+	void SetDamage(float Damage, bool bIsCritical);
+    
+	// 애니메이션 끝나면 호출
+	// UFUNCTION()
+	// void OnAnimationFinished();
 };

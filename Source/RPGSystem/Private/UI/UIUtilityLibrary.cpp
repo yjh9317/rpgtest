@@ -289,14 +289,14 @@ FVector2D UUIUtilityLibrary::ClampVector2D(FVector2D Value, float Min, float Max
 	return FVector2D{NewX,NewY};
 }
 
-void UUIUtilityLibrary::InterpRenderOpacity(UObject* WorldContextObject,UUserWidget* Target, float TargetValue, float InterpSpeed,
+void UUIUtilityLibrary::InterpRenderOpacity(UObject* WorldContextObject,UWidget* Target, float TargetValue, float InterpSpeed,
 	bool InterpConstant)
 {
 	float Opacity = Target->GetRenderOpacity();
 	Target->SetRenderOpacity(FInterpolate(WorldContextObject,Opacity,TargetValue,InterpSpeed,InterpConstant));
 }
 
-void UUIUtilityLibrary::InterpRenderTransform(UObject* WorldContextObject,UUserWidget* Target, ERenderTransform TransformType,
+void UUIUtilityLibrary::InterpRenderTransform(UObject* WorldContextObject,UWidget* Target, ERenderTransform TransformType,
 	FVector2D TargetValue, float InterpSpeed, bool InterpConstant)
 {
 	const FWidgetTransform& OldTransform = Target->GetRenderTransform();
@@ -329,7 +329,7 @@ void UUIUtilityLibrary::InterpRenderTransform(UObject* WorldContextObject,UUserW
 	
 }
 
-void UUIUtilityLibrary::InterpRenderAngle(UObject* WorldContextObject,UUserWidget* Target, float TargetValue, float InterpSpeed,
+void UUIUtilityLibrary::InterpRenderAngle(UObject* WorldContextObject,UWidget* Target, float TargetValue, float InterpSpeed,
 	bool InterpConstant)
 {
 	const FWidgetTransform& OldTransform = Target->GetRenderTransform();

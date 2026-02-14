@@ -1,4 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -7,6 +6,8 @@
 #include "Blueprint/UserWidget.h"
 #include "MinimapMarkerWidget.generated.h"
 
+class UImage;
+class UMinimapWidget;
 /**
  * 
  */
@@ -15,18 +16,77 @@ class RPGSYSTEM_API UMinimapMarkerWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
+	virtual void NativeConstruct() override;
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+	
+	UFUNCTION()
+	void MinimapMarkerInit();
+	
+	UFUNCTION()
+	void RemoveMarker();
+	
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	UObject* MarkerObject;
 
-	// (주석 처리됨) 추후 사용될 수 있는 멤버들
-	// UPROPERTY(VisibleAnywhere,BlueprintReadOnly)
-	// UObject* MarkerObject;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	UUserWidget* MinimapReference;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	float TextureMapSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	FVector2D MinMaxScale;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	float ZoomDivider;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	FMiniMapInfo MiniMapInfo;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	bool bIsFirstPerson;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	bool bRotateWithPlayer;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	float MinimapSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Exposed")
+	UUserWidget* MinimapDistantMarker;
+
+protected:
+	// UPROPERTY(Transient, meta = (BindWidgetAnim))
+	// class UWidgetAnimation* Fade;
 	//
-	// UPROPERTY(VisibleAnywhere,BlueprintReadOnly)
-	// UMinimapWidget* MinimapWidget;
+	// UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	// class UWidget* MarkerIcon;
+	//
+	// UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	// class UWidget* SB_Marker;
+	//
+	// UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	// class UWidget* Shine;
 
-	// [크기 및 정보] 부모 위젯에서 계산된 값을 받아 렌더링에 사용합니다.
-	float TextureMapSize;   // 원본 맵 텍스처 크기
-	float MinimapSize;      // 미니맵 위젯 크기
-	FVector2D MinMaxScale;  // 마커 최소/최대 크기
-	float ZoomDivide;       // 줌 배율에 따른 크기 보정값
-	FMiniMapInfo MiniMapInfo; // 전체 맵 정보 참조
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	FVector2D BottomLeftMapPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	FVector2D BottomTopRightPosition;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	float CanvasMapSize;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	float ZoomValue;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bScaleWithZoom;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	float MapAreaTolerance;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsVisible;
 };

@@ -3,7 +3,9 @@
 #include "Equipment/UI/CharacterEquipmentWidget.h"
 #include "Equipment/EquipmentComponent.h"
 #include "Equipment/UI/CharacterEquipmentSlotWidget.h"
-#include "RPGSystemGameplayTags.h" // ⭐ 이 헤더를 꼭 포함해야 합니다!
+#include "RPGSystemGameplayTags.h"
+
+using namespace RPGGameplayTags;
 
 void UCharacterEquipmentWidget::NativeConstruct()
 {
@@ -23,6 +25,14 @@ void UCharacterEquipmentWidget::NativeDestruct()
 	}
 	Super::NativeDestruct();
 }
+
+void UCharacterEquipmentWidget::SynchronizeProperties()
+{
+	Super::SynchronizeProperties();
+	
+	
+}
+
 void UCharacterEquipmentWidget::InitializeWidget(UEquipmentComponent* InEquipComp)
 {
 	EquipmentComp = InEquipComp;
@@ -30,10 +40,6 @@ void UCharacterEquipmentWidget::InitializeWidget(UEquipmentComponent* InEquipCom
 	
 	SlotWidgetMap.Empty();
 
-	// ⭐ 네임스페이스를 사용해 태그에 직접 접근 (Tags.XXX 아님)
-	using namespace RPGGameplayTags; 
-
-	// === Left Side (6) ===
 	if(Slot_Head)     SlotWidgetMap.Add(Equipment_Slot_Head,     Slot_Head);
 	if(Slot_Neck)     SlotWidgetMap.Add(Equipment_Slot_Neck,     Slot_Neck); 
 	if(Slot_Shoulder) SlotWidgetMap.Add(Equipment_Slot_Shoulder, Slot_Shoulder);
@@ -72,13 +78,11 @@ void UCharacterEquipmentWidget::InitializeWidget(UEquipmentComponent* InEquipCom
 
 void UCharacterEquipmentWidget::OnEquipmentUpdated(FGameplayTag SlotTag, const UItemInstance* ItemInstance)
 {
-	// 해당 태그를 가진 슬롯 위젯을 찾아서 업데이트
 	if (UCharacterEquipmentSlotWidget** FoundWidgetPtr = SlotWidgetMap.Find(SlotTag))
 	{
 		UCharacterEquipmentSlotWidget* Widget = *FoundWidgetPtr;
 		if (Widget)
 		{
-			// ItemInstance가 nullptr이면 빈 슬롯(아이콘 숨김) 처리됨
 			Widget->UpdateSlot(ItemInstance);
 		}
 	}

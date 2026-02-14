@@ -27,7 +27,8 @@ public class RPGSystem : ModuleRules
 			"SlateCore",
 			"Niagara",
 			"RenderCore",
-			"RHI" 
+			"RHI", 
+			"DialogueSystem"
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]

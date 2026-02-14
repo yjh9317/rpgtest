@@ -70,7 +70,7 @@ public:
 				PercentBonus *= (1.0f + Mod.ModifierValue);
 				break;
 			case EModifierSourceType::Override:
-				FinalValue = Mod.ModifierValue;
+				CurrentValue = FMath::Max(0.0f, Mod.ModifierValue);
 				return;  // Override는 다른 Modifier 무시
 			}
 		}
@@ -148,9 +148,6 @@ protected:
 	UPROPERTY(Transient)
 	TMap<FGameplayTag, int32> StatIndexCache;
 
-	UPROPERTY(Transient)
-	TMap<FGameplayTag, FTimerHandle> ModifierTimers;
-
 	UPROPERTY(EditDefaultsOnly,Category= "Stat | Data")
 	TObjectPtr<UDataAsset_StatConfig> DataAsset_StatConfig;
 	
@@ -159,6 +156,7 @@ protected:
 	
 private:
 	FTimerHandle StatRecalculationTimer;
+	FTimerHandle ModifierCleanupTimer;
 	bool bNeedsStatRecalculation = false;
 
 public:
@@ -209,6 +207,6 @@ private:
 	void RebuildStatCache();
 	// void RecalculateStat(const FGameplayTag& StatTag);
 	void CleanupExpiredModifiers();
-	void SetupModifierTimer(const FGameplayTag& StatTag, float Duration);
-	void OnModifierExpired(FGameplayTag StatTag);
+	void EnsureModifierCleanupTimerRunning();
+	void StopModifierCleanupTimerIfUnused();
 };

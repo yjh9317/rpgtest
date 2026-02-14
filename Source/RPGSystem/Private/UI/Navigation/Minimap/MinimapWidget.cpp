@@ -385,13 +385,13 @@ bool UMinimapWidget::MarkerObjectInUse(UObject* InMarkerObject)
 
 UObject* UMinimapWidget::ValidateMarkerObject(UObject* InObject)
 {
-	if (InObject)
-	{
-		if (AActor* Actor = Cast<AActor>(InObject))
-		{
-			return Cast<USceneComponent>(Actor) ? InObject : nullptr;
-		}
-	}
+	// if (InObject)
+	// {
+	// 	if (AActor* Actor = Cast<AActor>(InObject))
+	// 	{
+	// 		return Cast<USceneComponent>(Actor) ? InObject : nullptr;
+	// 	}
+	// }
 	return nullptr;
 }
 

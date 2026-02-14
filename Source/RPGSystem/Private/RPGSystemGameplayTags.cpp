@@ -10,6 +10,8 @@ namespace RPGGameplayTags
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Interact, "Input.Action.Interact", "Interaction Input");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Crouch, "Input.Action.Crouch", "Crouch Input");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Sprint, "Input.Action.Sprint", "Sprint Input");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Ascend, "Input.Action.Ascend", "Vertical Ascend Input");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Descend, "Input.Action.Descend", "Vertical Descend Input");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Attack, "Input.Action.Attack", "Attack Input");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Block, "Input.Action.Block", "Block Input");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Input_Action_Dodge, "Input.Action.Dodge", "Dodge/Roll Input");

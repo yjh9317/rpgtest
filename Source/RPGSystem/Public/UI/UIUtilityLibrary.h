@@ -126,11 +126,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Utility")
 	static FVector2D ClampVector2D(FVector2D Value, float Min, float Max);
 	UFUNCTION(BlueprintCallable, Category="Utility", meta=(WorldContext="WorldContextObject"))
-	static void InterpRenderOpacity(UObject* WorldContextObject,UUserWidget* Target, float TargetValue, float InterpSpeed, bool InterpConstant);
+	static void InterpRenderOpacity(UObject* WorldContextObject,UWidget* Target, float TargetValue, float InterpSpeed, bool InterpConstant);
 	UFUNCTION(BlueprintCallable, Category="Utility", meta=(WorldContext="WorldContextObject"))
-	static void InterpRenderTransform(UObject* WorldContextObject,UUserWidget* Target, ERenderTransform TransformType, FVector2D TargetValue, float InterpSpeed, bool InterpConstant);
+	static void InterpRenderTransform(UObject* WorldContextObject,UWidget* Target, ERenderTransform TransformType, FVector2D TargetValue, float InterpSpeed, bool InterpConstant);
 	UFUNCTION(BlueprintCallable, Category="Utility", meta=(WorldContext="WorldContextObject"))
-	static void InterpRenderAngle(UObject* WorldContextObject,UUserWidget* Target, float TargetValue, float InterpSpeed, bool InterpConstant);
+	static void InterpRenderAngle(UObject* WorldContextObject,UWidget* Target, float TargetValue, float InterpSpeed, bool InterpConstant);
 	UFUNCTION(BlueprintCallable, Category="Utility")
 	static bool HasColorChanged(FLinearColor InColor);
 	UFUNCTION(BlueprintCallable, Category="Utility")

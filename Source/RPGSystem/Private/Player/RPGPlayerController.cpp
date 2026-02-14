@@ -7,6 +7,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
+#include "Component/DialogueManagerComponent.h"
 #include "DamageFloat/DamageFloatManagerComponent.h"
 #include "HUD/RPGHUDWidget.h"
 #include "Input/RPGInputFunctionLibrary.h"
@@ -26,6 +27,7 @@
 ARPGPlayerController::ARPGPlayerController()
 {
 	DamageFloatManagerComponent = CreateDefaultSubobject<UDamageFloatManagerComponent>(TEXT("DamageFloatManagerComponent"));
+	DialogueManagerComponent = CreateDefaultSubobject<UDialogueManagerComponent>(TEXT("DialogueManagerComponent"));
 }
 
 void ARPGPlayerController::BeginPlay()
@@ -99,6 +101,8 @@ void ARPGPlayerController::OnPossess(APawn* InPawn)
 		// ViewModel 재연결 로직 등...
 	}
 }
+
+
 
 void ARPGPlayerController::TryInteract()
 {
@@ -314,3 +318,82 @@ void ARPGPlayerController::HandleLoadCompleted()
 {
 	UE_LOG(LogTemp, Warning, TEXT("=== GAME LOAD COMPLETE ==="));
 }
+
+#pragma region DialogueInterface
+
+void ARPGPlayerController::StartDialogue_Implementation(UDialogue* Dialogue, AActor* NPCActor)
+{
+	IDialogueControllerInterface::StartDialogue_Implementation(Dialogue, NPCActor);
+}
+
+void ARPGPlayerController::EndDialogue_Implementation()
+{
+	IDialogueControllerInterface::EndDialogue_Implementation();
+}
+
+void ARPGPlayerController::DisplayNPCDialogue_Implementation(const FDialogueNode& Node, AActor* NPCActor)
+{
+	IDialogueControllerInterface::DisplayNPCDialogue_Implementation(Node, NPCActor);
+}
+
+void ARPGPlayerController::DisplayPlayerOptions_Implementation(const TArray<FDialogueNode>& Options)
+{
+	IDialogueControllerInterface::DisplayPlayerOptions_Implementation(Options);
+}
+
+void ARPGPlayerController::HideDialogueUI_Implementation()
+{
+	IDialogueControllerInterface::HideDialogueUI_Implementation();
+}
+
+void ARPGPlayerController::OnPlayerSelectOption_Implementation(int32 NodeId)
+{
+	IDialogueControllerInterface::OnPlayerSelectOption_Implementation(NodeId);
+}
+
+bool ARPGPlayerController::IsInDialogue_Implementation() const
+{
+	return IDialogueControllerInterface::IsInDialogue_Implementation();
+}
+
+bool ARPGPlayerController::CanStartDialogue_Implementation() const
+{
+	return IDialogueControllerInterface::CanStartDialogue_Implementation();
+}
+
+void ARPGPlayerController::SwitchToDialogueCamera_Implementation(AActor* NPCActor)
+{
+	IDialogueControllerInterface::SwitchToDialogueCamera_Implementation(NPCActor);
+}
+
+void ARPGPlayerController::RestoreGameplayCamera_Implementation()
+{
+	IDialogueControllerInterface::RestoreGameplayCamera_Implementation();
+}
+
+void ARPGPlayerController::SetDialogueInputMode_Implementation(bool bDialogueMode)
+{
+	IDialogueControllerInterface::SetDialogueInputMode_Implementation(bDialogueMode);
+}
+
+void ARPGPlayerController::FaceNPC_Implementation(AActor* NPCActor)
+{
+	IDialogueControllerInterface::FaceNPC_Implementation(NPCActor);
+}
+
+void ARPGPlayerController::SetCharacterMovementEnabled_Implementation(bool bEnabled)
+{
+	IDialogueControllerInterface::SetCharacterMovementEnabled_Implementation(bEnabled);
+}
+
+void ARPGPlayerController::AddToDialogueHistory_Implementation(const FDialogueNode& Node, bool bIsPlayerChoice)
+{
+	IDialogueControllerInterface::AddToDialogueHistory_Implementation(Node, bIsPlayerChoice);
+}
+
+bool ARPGPlayerController::CanSkipDialogue_Implementation() const
+{
+	return IDialogueControllerInterface::CanSkipDialogue_Implementation();
+}
+
+#pragma endregion DialogueInterface

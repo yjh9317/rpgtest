@@ -7,7 +7,7 @@
 #include "Components/ActorComponent.h"
 #include "HitBoxComponent.generated.h"
 
-class ARPGPlayerCharacter;
+class ACharacter;
 
 // 상수 정의
 namespace HitBoxConstants
@@ -239,7 +239,7 @@ protected:
     virtual void BeginDestroy() override;
 
     UPROPERTY(Transient)
-    TObjectPtr<ARPGPlayerCharacter> OwnerCharacter;
+    TObjectPtr<ACharacter> OwnerCharacter;
 
     UPROPERTY(Transient)
     TObjectPtr<USkeletalMeshComponent> OwnerMesh;
@@ -281,7 +281,7 @@ private:
 	void ProcessHit(const FHitResult& Hit);
 	bool CanHitActor(AActor* Actor) const;
 	float CalculateFinalDamage(const FHitResult& Hit, bool& bOutWasCritical);
-	void ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit);
+	void ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit, float FinalDamage, bool bWasCritical);
 	
 	// 이펙트
 	void PlayHitEffects(const FVector& Location, const FVector& Normal);

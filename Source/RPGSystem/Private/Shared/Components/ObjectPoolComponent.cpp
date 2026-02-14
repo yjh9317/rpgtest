@@ -185,16 +185,10 @@ void UObjectPoolComponent::ReturnObjectToPool(UObject* ObjectToReturn)
     FObjectPoolInstance* PoolInstance = nullptr;
     if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(ObjectToReturn))
     {
-        // MID의 Parent를 통해 원래 BaseMaterial을 찾아야 함. (복잡할 수 있음. 생성 시 저장해두거나, 다른 식별자 필요)
-        // 여기서는 간단히 클래스로 찾지만, MID는 클래스가 동일하므로 다른 방법 필요.
-        // 임시로, MID는 별도의 로직으로 처리하거나, 생성 시 PoolInstance와 매핑해둬야 함.
-        // 여기서는 ObjectClass 기반으로만 찾도록 단순화.
-        // 실제로는 UMaterialInstanceDynamic::Parent를 통해 원본 Material을 찾아야 함.
-        // 또는 풀링 시점에 어떤 Material Pool에 속했는지 정보를 태깅/저장해야 함.
-        // 지금은 MID 반환은 해당 Material의 PoolInstance를 찾는 로직이 추가되어야 완전해짐.
-        // 간단히 하기 위해 클래스 기반으로만 찾음.
-        PoolInstance = FindPoolInstanceByClass(ObjectToReturn->GetClass()); // MID의 경우 이 방식은 부정확함.
-        // PoolInstance = FindPoolInstanceByMaterial(MID->Parent); // 이런식으로 찾아야 함.
+        if (TObjectPtr<UMaterialInterface>* BaseMaterialPtr = MaterialToBaseMap.Find(MID))
+        {
+            PoolInstance = FindPoolInstanceByMaterial(*BaseMaterialPtr);
+        }
     }
     else
     {
@@ -232,8 +226,11 @@ void UObjectPoolComponent::ReturnObjectToPool(UObject* ObjectToReturn)
         ManageWidgetState(WidgetToReturn, false);
     }
     // Material Instance Dynamic은 특별한 비활성화 로직이 없을 수 있음.
-
-    PoolInstance->AvailableObjects.Add(ObjectToReturn);
+    
+    if (!PoolInstance->AvailableObjects.Contains(ObjectToReturn))
+    {
+        PoolInstance->AvailableObjects.Add(ObjectToReturn);
+    }
 }
 
 void UObjectPoolComponent::ReturnObjectsToPool(TArray<UObject*>& ObjectsToReturn)
@@ -257,7 +254,7 @@ void UObjectPoolComponent::PrewarmPool(TSubclassOf<UObject> ObjectClass, int32 C
     int32 ActuallySpawnedCount = 0;
     for (int32 i = 0; i < CountToSpawn; ++i)
     {
-        if (PoolInstance->AvailableObjects.Num() + PoolInstance->TotalSpawnedCount - PoolInstance->AvailableObjects.Num() /* 현재 활성 객체 수 고려 */ >= PoolInstance->TypeConfig.SpawnSettings.MaxPoolSize)
+        if (PoolInstance->TotalSpawnedCount >= PoolInstance->TypeConfig.SpawnSettings.MaxPoolSize)
         {
             break; // 최대 풀 크기 도달
         }
@@ -305,6 +302,13 @@ void UObjectPoolComponent::DestroyMaterialInstancesInPool(UMaterialInterface* Ba
         return;
     }
     // MaterialInstanceDynamic은 특별한 Destroy 호출이 필요 없을 수 있으나, 참조를 제거하는 것이 중요.
+    for (UObject* Obj : PoolInstance->AvailableObjects)
+    {
+        if (UMaterialInstanceDynamic* MID = Cast<UMaterialInstanceDynamic>(Obj))
+        {
+            MaterialToBaseMap.Remove(MID);
+        }
+    }
     PoolInstance->AvailableObjects.Empty();
 }
 
@@ -323,6 +327,7 @@ void UObjectPoolComponent::DestroyAllPools()
         PoolInstance.AvailableObjects.Empty();
     }
     PoolInstances.Empty();
+    MaterialToBaseMap.Empty();
     LastFoundPoolIndex = INDEX_NONE;
 }
 
@@ -558,6 +563,10 @@ UObject* UObjectPoolComponent::RetrieveOrCreateObjectForPool(FObjectPoolInstance
         if (PoolInstance.TypeConfig.BaseMaterialInterface)
         {
             NewPooledObject = UMaterialInstanceDynamic::Create(PoolInstance.TypeConfig.BaseMaterialInterface, this);
+            if (UMaterialInstanceDynamic* NewMID = Cast<UMaterialInstanceDynamic>(NewPooledObject))
+            {
+                MaterialToBaseMap.Add(NewMID, PoolInstance.TypeConfig.BaseMaterialInterface);
+            }
         }
         else
         {

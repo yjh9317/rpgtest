@@ -22,11 +22,7 @@ class RPGSYSTEM_API URPGAsyncCheck : public UBlueprintAsyncActionBase
 	GENERATED_BODY()
 public:
 	URPGAsyncCheck();
-
 	
-
-public:
-
 	UPROPERTY(BlueprintAssignable)
 	FCheckCompletedPin OnCompleted;
 

@@ -70,11 +70,11 @@ struct FPooledObjectTypeConfig
     TSubclassOf<UObject> ObjectClassToPool = nullptr;
 
     /** 머티리얼 인스턴스 다이나믹을 풀링할 경우, 원본 머티리얼 인터페이스 */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectPool|TypeConfig", meta = (EditCondition = "PoolType == EPooledObjectType::MaterialInstanceDynamic", EditConditionHides))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectPool|TypeConfig")
     TObjectPtr<UMaterialInterface> BaseMaterialInterface = nullptr;
 
     /** 위젯을 풀링할 경우, 위젯의 소유자 (일반적으로 PlayerController 또는 다른 위젯) */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectPool|TypeConfig", meta = (EditCondition = "PoolType == EPooledObjectType::UserWidget", EditConditionHides))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "ObjectPool|TypeConfig")
     TObjectPtr<UUserWidget> WidgetOwner = nullptr; // 실제로는 PlayerController 등이 더 적합할 수 있음
 
     /** 이 타입의 오브젝트 풀에 적용될 스폰 설정 */
@@ -269,6 +269,10 @@ private:
     /** 풀링할 오브젝트 타입별 설정을 저장하는 배열입니다. */
     UPROPERTY(VisibleInstanceOnly, Category = "ObjectPool|Internal")
     TArray<FObjectPoolInstance> PoolInstances;
+    
+    /** MID -> BaseMaterial 매핑 (반환 시 정확한 풀 식별용) */
+    UPROPERTY(Transient)
+    TMap<TObjectPtr<UMaterialInstanceDynamic>, TObjectPtr<UMaterialInterface>> MaterialToBaseMap;
 
     /** 마지막으로 찾은 풀 인스턴스의 인덱스 (캐싱용) */
     mutable int32 LastFoundPoolIndex = INDEX_NONE;

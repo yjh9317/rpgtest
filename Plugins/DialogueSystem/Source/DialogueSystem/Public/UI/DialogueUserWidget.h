@@ -7,6 +7,7 @@
 #include "Blueprint/UserWidget.h"
 #include "DialogueUserWidget.generated.h"
 
+class UDialogueViewModel;
 /**
  * 
  */
@@ -14,6 +15,19 @@ UCLASS()
 class DIALOGUESYSTEM_API UDialogueUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
+	
+public:
+	UPROPERTY(meta = (BindWidget))
+	class UTextBlock* Txt_CurrentDialogue;
+	
+	UPROPERTY(meta = (BindWidget))
+	class UScrollBox* Scroll_DialogueHistory;
+    
+	UPROPERTY(meta = (BindWidget))
+	class UVerticalBox* VB_DialogueHistory;
+	
+	UPROPERTY()
+	TObjectPtr<UDialogueViewModel> ViewModel;
 public:
 	// Conditions
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Dialogue UI")

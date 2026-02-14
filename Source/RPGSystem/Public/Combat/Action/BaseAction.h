@@ -11,8 +11,14 @@
 class UBaseAction;
 class UActionComponent;
 
+UENUM(BlueprintType)
+enum class EActionEndReason : uint8
+{
+	Completed,
+	Interrupted
+};
 
-DECLARE_DELEGATE_OneParam(FOnActionEnded, UBaseAction*);
+DECLARE_DELEGATE_TwoParams(FOnActionEnded, UBaseAction*, EActionEndReason);
 
 UCLASS(Blueprintable,BlueprintType)
 class RPGSYSTEM_API UBaseAction : public UObject
@@ -149,6 +155,7 @@ protected:
 	
 	virtual void StartCooldown();
     virtual bool OnHasRequiredResources() const { return true; }
+	void EndAction(EActionEndReason EndReason);
 public:
 	UObject* GetSourceObject() const { return SourceObject; }
 };

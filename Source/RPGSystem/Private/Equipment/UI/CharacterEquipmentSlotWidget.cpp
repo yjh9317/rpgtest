@@ -7,6 +7,7 @@
 #include "Item/Data/ItemInstance.h"
 #include "Item/Data/ItemDefinition.h"
 #include "Components/Image.h"
+#include "Components/TextBlock.h"
 #include "Input/Reply.h"
 
 // 만약 드래그 드롭 오퍼레이션 클래스가 따로 있다면 include
@@ -87,6 +88,17 @@ FReply UCharacterEquipmentSlotWidget::NativeOnMouseButtonDown(const FGeometry& I
 	return Super::NativeOnMouseButtonDown(InGeometry, InMouseEvent);
 }
 
+void UCharacterEquipmentSlotWidget::SynchronizeProperties()
+{
+	Super::SynchronizeProperties();
+	
+	if (Txt_Slot)
+	{
+		Txt_Slot->SetText(SlotText);
+	}
+}
+
 void UCharacterEquipmentSlotWidget::OnSlotButtonClicked()
 {
+	
 }

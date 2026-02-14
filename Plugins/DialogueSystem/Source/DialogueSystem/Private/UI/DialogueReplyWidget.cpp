@@ -4,24 +4,103 @@
 #include "UI/DialogueReplyWidget.h"
 #include "Components/Button.h"
 #include "Components/TextBlock.h"
+#include "UI/DialogueUserWidget.h"
+#include "UI/DialogueViewModel.h"
 
-void UDialogueReplyWidget::Setup(FText InText, int32 InNodeId, UDialogueUserWidget* InParent)
+void UDialogueReplyWidget::NativeConstruct()
 {
-	if (ReplyText) ReplyText->SetText(InText);
-	TargetNodeId = InNodeId;
-	ParentDialogueWidget = InParent;
+	Super::NativeConstruct();
     
 	if (ReplyButton)
 	{
+		// 버튼 이벤트 바인딩
 		ReplyButton->OnClicked.AddDynamic(this, &UDialogueReplyWidget::OnReplyClicked);
+		ReplyButton->OnHovered.AddDynamic(this, &UDialogueReplyWidget::OnReplyHovered);
+		ReplyButton->OnUnhovered.AddDynamic(this, &UDialogueReplyWidget::OnReplyUnhovered);
+        
+		// 초기 스타일 적용
+		ApplyButtonStyle(false);
 	}
+}
+
+
+void UDialogueReplyWidget::Setup(const FText& InText, int32 InNodeId, UDialogueUserWidget* InParent, int32 OptionIndex)
+{
+	TargetNodeId = InNodeId;
+	ParentDialogueWidget = InParent;
+    
+	// 텍스트 설정
+	if (ReplyText)
+	{
+		ReplyText->SetText(InText);
+		ReplyText->SetColorAndOpacity(FSlateColor(TextNormalColor));
+	}
+    
+	// 번호 설정
+	if (OptionNumberText && OptionIndex > 0)
+	{
+		OptionNumberText->SetText(FText::AsNumber(OptionIndex));
+	}
+    
+	// 초기 스타일
+	ApplyButtonStyle(false);
 }
 
 void UDialogueReplyWidget::OnReplyClicked()
 {
-	if (ParentDialogueWidget)
+	if (ParentDialogueWidget && ParentDialogueWidget->ViewModel)
 	{
-		// 부모 위젯에 구현할 대화 진행 함수 호출 (예: SelectOption)
-		// ParentDialogueWidget->SelectOption(TargetNodeId);
+		ParentDialogueWidget->ViewModel->SelectOption(TargetNodeId);
+        
+		// 클릭 사운드 재생 (선택적)
+		// UGameplayStatics::PlaySound2D(this, ClickSound);
 	}
+}
+
+void UDialogueReplyWidget::OnReplyHovered()
+{
+	bIsHovered = true;
+	ApplyButtonStyle(true);
+    
+	// 호버 사운드 재생 (선택적)
+	// UGameplayStatics::PlaySound2D(this, HoverSound);
+}
+
+void UDialogueReplyWidget::OnReplyUnhovered()
+{
+	bIsHovered = false;
+	ApplyButtonStyle(false);
+}
+
+void UDialogueReplyWidget::ApplyButtonStyle(bool bHovered)
+{
+	if (!ReplyButton) return;
+    
+	// 버튼 배경 색상 변경
+	FButtonStyle ButtonStyle = ReplyButton->GetStyle();
+    
+	if (bHovered)
+	{
+		ButtonStyle.Normal.TintColor = FSlateColor(HoveredColor);
+		ButtonStyle.Hovered.TintColor = FSlateColor(HoveredColor);
+        
+		// 텍스트 색상 변경
+		if (ReplyText)
+		{
+			ReplyText->SetColorAndOpacity(FSlateColor(TextHoveredColor));
+		}
+	}
+	else
+	{
+		ButtonStyle.Normal.TintColor = FSlateColor(NormalColor);
+		ButtonStyle.Hovered.TintColor = FSlateColor(HoveredColor);
+        
+		// 텍스트 색상 변경
+		if (ReplyText)
+		{
+			ReplyText->SetColorAndOpacity(FSlateColor(TextNormalColor));
+		}
+	}
+    
+	ReplyButton->SetStyle(ButtonStyle);
 }

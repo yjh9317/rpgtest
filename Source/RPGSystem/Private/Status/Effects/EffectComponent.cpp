@@ -3,6 +3,7 @@
 #include "Status/Effects/EffectComponent.h"
 #include "GameFramework/Actor.h"
 #include "Engine/World.h"
+#include "Status/StatsComponent.h"
 #include "Status/Cues/CueManagerSubsystem.h"
 #include "Status/Effects/RPGEffect.h"
 
@@ -24,6 +25,7 @@ void UEffectComponent::BeginPlay()
             CueManager = GameInstance->GetSubsystem<UCueManagerSubsystem>();
         }
     }
+    StatsComponent = GetOwner() ? GetOwner()->FindComponentByClass<UStatsComponent>() : nullptr;
 }
 
 void UEffectComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -31,6 +33,72 @@ void UEffectComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
     
     UpdateActiveEffects(DeltaTime);
+}
+
+void UEffectComponent::ApplyEffectStatModifiers(const FActiveEffectHandle& EffectHandle, bool bPersistentModifier)
+{
+    if (!StatsComponent || !EffectHandle.EffectDefinition)
+    {
+        return;
+    }
+
+    const float TotalMagnitude = EffectHandle.GetTotalMagnitude();
+
+    for (const FEffectStatModifier& Modifier : EffectHandle.EffectDefinition->StatModifiers)
+    {
+        if (!Modifier.StatTag.IsValid())
+        {
+            continue;
+        }
+
+        const float FinalValue = Modifier.Value * TotalMagnitude;
+
+        if (Modifier.ModifierType != EModifierSourceType::Flat)
+        {
+            UE_LOG(LogTemp, Verbose, TEXT("UEffectComponent::ApplyEffectStatModifiers - Non-flat modifier type is skipped for runtime delta application."));
+            continue;
+        }
+
+        StatsComponent->ModifyStatValue(Modifier.StatTag, FinalValue);
+
+        if (bPersistentModifier)
+        {
+            FAppliedEffectDelta Delta;
+            Delta.StatTag = Modifier.StatTag;
+            Delta.AppliedDelta = FinalValue;
+            AppliedEffectDeltas.FindOrAdd(EffectHandle.InstanceID).Add(Delta);
+        }
+    }
+}
+
+void UEffectComponent::RemoveEffectStatModifiers(const FGuid& InstanceID)
+{
+    if (!StatsComponent)
+    {
+        return;
+    }
+
+    TArray<FAppliedEffectDelta>* AppliedDeltas = AppliedEffectDeltas.Find(InstanceID);
+    if (!AppliedDeltas)
+    {
+        return;
+    }
+
+    for (const FAppliedEffectDelta& Delta : *AppliedDeltas)
+    {
+        if (Delta.StatTag.IsValid() && !FMath::IsNearlyZero(Delta.AppliedDelta))
+        {
+            StatsComponent->ModifyStatValue(Delta.StatTag, -Delta.AppliedDelta);
+        }
+    }
+
+    AppliedEffectDeltas.Remove(InstanceID);
+}
+
+void UEffectComponent::ReapplyPersistentEffectStatModifiers(const FActiveEffectHandle& EffectHandle)
+{
+    RemoveEffectStatModifiers(EffectHandle.InstanceID);
+    ApplyEffectStatModifiers(EffectHandle, true);
 }
 
 // ========== EFFECT APPLICATION ==========
@@ -64,6 +132,7 @@ FActiveEffectHandle UEffectComponent::ApplyEffect(URPGEffect* EffectToApply, con
         FActiveEffectHandle* ExistingEffect = HandleStacking(EffectToApply, Context);
         if (ExistingEffect)
         {
+            ReapplyPersistentEffectStatModifiers(*ExistingEffect);
             return *ExistingEffect; // Return the modified existing effect
         }
         // If HandleStacking returns nullptr and StackPolicy is None, we reject the effect
@@ -89,6 +158,9 @@ FActiveEffectHandle UEffectComponent::ApplyEffect(URPGEffect* EffectToApply, con
     // Calculate magnitude
     NewEffect.RecalculateMagnitude();
 
+    // Apply persistent stat modifiers immediately for first-time applications.
+    ApplyEffectStatModifiers(NewEffect, true);
+    
     // Add to active effects
     ActiveEffects.Add(NewEffect);
 
@@ -340,6 +412,8 @@ void UEffectComponent::ApplyInstantEffect(URPGEffect* Effect, const FEffectConte
     TempHandle.Context = Context;
     TempHandle.RecalculateMagnitude();
 
+    ApplyEffectStatModifiers(TempHandle, false);
+    
     // Broadcast event (listeners will handle the actual effect)
     OnEffectApplied.Broadcast(Effect, Context, TempHandle);
 
@@ -361,7 +435,8 @@ void UEffectComponent::ExecuteEffectTick(FActiveEffectHandle& EffectHandle)
     }
 
     EffectHandle.TickCount++;
-
+    ApplyEffectStatModifiers(EffectHandle, false);
+    
     // Broadcast tick event (listeners handle the actual damage/heal/etc.)
     OnEffectTick.Broadcast(EffectHandle, EffectHandle.GetTotalMagnitude());
 
@@ -403,6 +478,7 @@ void UEffectComponent::UpdateActiveEffects(float DeltaTime)
 
 void UEffectComponent::OnEffectRemovedInternal(const FActiveEffectHandle& RemovedEffect)
 {
+    RemoveEffectStatModifiers(RemovedEffect.InstanceID);
     // Broadcast removal event
     if (RemovedEffect.EffectDefinition)
     {

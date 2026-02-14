@@ -69,9 +69,8 @@ private:
 	float CurrentZoomValue; // 현재 줌 배율
 
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess))
-	FMiniMapInfo MiniMapInfo; // 현재 맵 정보
+	FMiniMapInfo MiniMapInfo; 
 	
-	// [좌표 캐싱] 매번 계산하지 않고 저장해둠
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess))
 	FVector2D BottomLeft;
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess))

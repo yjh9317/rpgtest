@@ -9,13 +9,33 @@
 #include "CombatComponentBase.generated.h"
 
 class UStatsComponent;
+class URPGEffect;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageReceived, float, Damage, AActor*, Instigator, const FDamageInfo&, DamageInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageDealt, float, Damage, AActor*, Target, const FDamageInfo&, DamageInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatDeath, AActor*, Killer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatStateChanged, bool, bInCombat);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreDamageApplied, const FDamageInfo&, DamageInfo, AActor*, Instigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnPostDamageApplied, float, AppliedDamage, const FDamageInfo&, DamageInfo, AActor*, Instigator, bool, bKilledTarget);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedFromCombat, float, OldHealth, float, NewHealth);
 
+USTRUCT(BlueprintType)
+struct FDamageEffectRule
+{
+	GENERATED_BODY()
 
+	/** Optional damage type tag match (exact or child tag match via MatchesTag). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects", meta=(Categories="Damage.Type"))
+	FGameplayTag RequiredDamageTypeTag;
+
+	/** Optional damage tag set match (if empty, ignored). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects")
+	FGameplayTagContainer RequiredDamageTags;
+
+	/** Effect applied to the damaged target when rule matches. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects")
+	TObjectPtr<URPGEffect> EffectToApply = nullptr;
+};
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class RPGSYSTEM_API UCombatComponentBase : public UActorComponent, public ICombatable
@@ -47,6 +67,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config")
 	bool bAutoLeaveCombat = true;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config", meta=(Categories="Character.Stats"))
+	FGameplayTag HealthStatTag;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Config")
+	TArray<FDamageEffectRule> DamageEffectRules;
 public:
 	// === 델리게이트 ===
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
@@ -61,6 +86,17 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
 	FOnCombatStateChanged OnCombatStateChanged;
 
+	/** Fired before damage is resolved. Useful for hit-stop/camera/vfx hooks. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnPreDamageApplied OnPreDamageApplied;
+
+	/** Fired after damage has been resolved. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnPostDamageApplied OnPostDamageApplied;
+
+	/** Fired when combat damage changed health value. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnHealthChangedFromCombat OnHealthChangedFromCombat;
 	// === ICombatable 구현 ===
 	virtual bool IsAlive() const override { return !bIsDead; }
 	virtual float GetCurrentHealth() const override;
@@ -106,6 +142,8 @@ protected:
 
 	void CheckCombatTimeout(float DeltaTime);
 	UStatsComponent* GetStatsComponent() const;
+	void LogInvalidHealthStatTag(const TCHAR* CallerName) const;
+	void ApplyDamageDrivenEffects(const FDamageInfo& DamageInfo);
 
 private:
 	bool bIsInvulnerable = false;

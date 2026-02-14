@@ -2,10 +2,12 @@
 
 
 #include "Hitbox/HitBoxComponent.h"
-
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
-#include "Player/RPGPlayerCharacter.h"
+#include "Combat/CombatData.h"
+#include "Combat/Combatable.h"
+#include "Combat/Components/CombatComponentBase.h"
+#include "GameFramework/Character.h"
 
 
 UHitBoxComponent::UHitBoxComponent()
@@ -25,7 +27,7 @@ void UHitBoxComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// Owner 캐릭터 캐싱
-	OwnerCharacter = Cast<ARPGPlayerCharacter>(GetOwner());
+	OwnerCharacter = Cast<ACharacter>(GetOwner());
 	if (OwnerCharacter)
 	{
 		OwnerMesh = OwnerCharacter->GetMesh();
@@ -354,8 +356,8 @@ void UHitBoxComponent::ProcessHit(const FHitResult& Hit)
 	CurrentHitCount++;
 
 	// 데미지 적용
-	ApplyDamageToActor(HitActor, Hit);
-
+	ApplyDamageToActor(HitActor, Hit, FinalDamage, bWasCritical);
+	
 	// 이펙트 재생
 	PlayHitEffects(Hit.Location, Hit.Normal);
 
@@ -420,22 +422,7 @@ bool UHitBoxComponent::CanHitActor(AActor* Actor) const
 	}
 
 	// 태그 필터 체크 (BaseCharacter인 경우)
-	if (ARPGPlayerCharacter* Char = Cast<ARPGPlayerCharacter>(Actor))
-	{
-		// FGameplayTagContainer ActorTags = BaseChar->GetCharacterTags();
-		//
-		// // 필수 태그 체크
-		// if (RequiredTags.Num() > 0 && !ActorTags.HasAny(RequiredTags))
-		// {
-		// 	return false;
-		// }
-		//
-		// // 무시 태그 체크
-		// if (IgnoreTags.Num() > 0 && ActorTags.HasAny(IgnoreTags))
-		// {
-		// 	return false;
-		// }
-	}
+	// TODO: 태그 시스템 연동 시 RequiredTags/IgnoreTags 실제 비교 구현
 
 	return true;
 }
@@ -464,45 +451,45 @@ float UHitBoxComponent::CalculateFinalDamage(const FHitResult& Hit, bool& bOutWa
 	return FinalDamage;
 }
 
-void UHitBoxComponent::ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit)
+void UHitBoxComponent::ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit, float FinalDamage, bool bWasCritical)
 {
 	if (!HitActor || !OwnerCharacter)
 	{
 		return;
 	}
 
-	// 최종 데미지 계산
-	bool bWasCritical = false;
-	float FinalDamage = CalculateFinalDamage(Hit, bWasCritical);
+	float ActualDamage = 0.0f;
 
-	// 데미지 타입에 따른 DamageType 클래스 선택
-	TSubclassOf<UDamageType> DamageTypeClass = UDamageType::StaticClass();
-    
-	// 커스텀 데미지 타입이 있다면 여기서 설정
-	// 예: DamageTypeClass = GetDamageTypeClass(DamageType);
+	FDamageInfo DamageInfo;
+	DamageInfo.BaseDamage = FinalDamage;
+	DamageInfo.SourceActor = OwnerCharacter;
 
-	// UE5 데미지 시스템을 통한 데미지 적용
-	float ActualDamage = UGameplayStatics::ApplyDamage(
-		HitActor,
-		FinalDamage,
-		OwnerCharacter->GetInstigatorController(),
-		OwnerCharacter,
-		DamageTypeClass
-	);
-
-	// 데미지 넘버 표시
+	if (ICombatable* Combatable = Cast<ICombatable>(HitActor))
+	{
+		ActualDamage = Combatable->ReceiveDamage(DamageInfo);
+	}
+	else if (UCombatComponentBase* CombatComp = HitActor->FindComponentByClass<UCombatComponentBase>())
+	{
+		ActualDamage = CombatComp->ReceiveDamage(DamageInfo);
+	}
+	else
+	{
+		ActualDamage = UGameplayStatics::ApplyDamage(
+			HitActor,
+			FinalDamage,
+			OwnerCharacter->GetInstigatorController(),
+			OwnerCharacter,
+			UDamageType::StaticClass());
+	}
+	
 	if (ActualDamage > 0.0f)
 	{
 		// ShowDamageNumber(Hit.Location, ActualDamage, bWasCritical);
 	}
-
-	// 히트 스턴 적용
+	
 	if (bApplyHitStun && HitStunDuration > 0.0f)
 	{
-		if (ARPGPlayerCharacter* HitCharacter = Cast<ARPGPlayerCharacter>(HitActor))
-		{
-			// HitCharacter->ApplyHitStun(HitStunDuration);
-		}
+		// TODO: target stun interface/component integration
 	}
 }
 

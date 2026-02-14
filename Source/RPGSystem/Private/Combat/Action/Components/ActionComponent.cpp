@@ -300,6 +300,7 @@ void UActionComponent::CreateActionInstances()
         if (ActionInstances.Contains(ActionDef.ActionTag)) continue;
 
         UBaseAction* NewAction = NewObject<UBaseAction>(this, ActionDef.ActionClass);
+        NewAction->OnActionEnded.BindUObject(this, &UActionComponent::OnActionCompleted);
         NewAction->Initialize(GetOwner()); // SourceObject는 nullptr (기본 스킬이므로)
         NewAction->ActionTag = ActionDef.ActionTag;
 
@@ -307,7 +308,7 @@ void UActionComponent::CreateActionInstances()
     }
 }
 
-void UActionComponent::OnActionCompleted(UBaseAction* Action)
+void UActionComponent::OnActionCompleted(UBaseAction* Action, EActionEndReason EndReason)
 {
     if (!Action) return;
 
@@ -316,6 +317,14 @@ void UActionComponent::OnActionCompleted(UBaseAction* Action)
     if (Action->bWantsTick)
     {
         TickingActions.Remove(Action);
+    }
+    if (EndReason == EActionEndReason::Interrupted)
+    {
+        OnActionInterruptedEvent.Broadcast(Action->GetActionTag());
+    }
+    else
+    {
+        OnActionCompletedEvent.Broadcast(Action->GetActionTag());
     }
 }
 

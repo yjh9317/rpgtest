@@ -119,6 +119,10 @@ void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Started, this, &ThisClass::Input_SecondaryAction);
 		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Secondary, ETriggerEvent::Completed, this, &ThisClass::Input_SecondaryAction);
 		RPGInputComp->BindAbilityActions(InputConfig, this, &ThisClass::Input_AbilityAction);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Ascend, ETriggerEvent::Triggered, this, &ThisClass::Input_Ascend, false);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Ascend, ETriggerEvent::Completed, this, &ThisClass::Input_Ascend, false);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Descend, ETriggerEvent::Triggered, this, &ThisClass::Input_Descend, false);
+		RPGInputComp->BindNativeAction(InputConfig, RPGGameplayTags::Input_Action_Descend, ETriggerEvent::Completed, this, &ThisClass::Input_Descend, false);
 	}
 }
 
@@ -181,6 +185,134 @@ void ARPGPlayerCharacter::Input_AbilityAction(const FInputActionValue& Value, FG
 	}
 }
 
+void ARPGPlayerCharacter::Input_Ascend(const FInputActionValue& Value)
+{
+	const float Axis = Value.Get<float>();
+	if (ResolveMovementModeForInput() != EPlayerMovementMode::Fly)
+	{
+		FlyingAscendInput = 0.0f;
+		return;
+	}
+	FlyingAscendInput = FMath::Clamp(Axis, 0.0f, 1.0f);
+}
+
+void ARPGPlayerCharacter::Input_Descend(const FInputActionValue& Value)
+{
+	const float Axis = Value.Get<float>();
+	if (ResolveMovementModeForInput() != EPlayerMovementMode::Fly)
+	{
+		FlyingDescendInput = 0.0f;
+		return;
+	}
+	FlyingDescendInput = FMath::Clamp(Axis, 0.0f, 1.0f);
+}
+
+void ARPGPlayerCharacter::ApplyGroundMovement(const FVector2D& MovementVector)
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+	
+	AddMovementInput(ForwardDirection, MovementVector.Y);
+	AddMovementInput(RightDirection, MovementVector.X);
+}
+
+void ARPGPlayerCharacter::ApplyFlyingMovement(const FVector2D& MovementVector)
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	const FRotator Rotation = Controller->GetControlRotation();
+	const FRotator YawRotation(0, Rotation.Yaw, 0);
+	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+	// 비행: 기본적으로 앞으로 진행 + A/D는 좌우 이동, W/S(IA_Ascend, IA_Descend)는 상하 입력
+	FlyingVerticalInput = FMath::Clamp(FlyingAscendInput - FlyingDescendInput, -1.0f, 1.0f);
+	AddMovementInput(ForwardDirection, FlyingForwardSpeedScale);
+	AddMovementInput(RightDirection, MovementVector.X);
+	AddMovementInput(FVector::UpVector, FlyingVerticalInput);
+}
+
+void ARPGPlayerCharacter::ApplySwimmingMovement(const FVector2D& MovementVector)
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// 수영: 마우스(카메라) 방향 기준으로 전진/측면 이동
+	const FRotator ControlRotation = Controller->GetControlRotation();
+	const FVector ForwardDirection = ControlRotation.Vector();
+	const FVector RightDirection = FRotationMatrix(ControlRotation).GetUnitAxis(EAxis::Y);
+
+	AddMovementInput(ForwardDirection, MovementVector.Y);
+	AddMovementInput(RightDirection, MovementVector.X);
+}
+
+void ARPGPlayerCharacter::ApplyRidingMovement(const FVector2D& MovementVector)
+{
+	// Riding은 Strafe가 아니라 조향 + 전후 속도(말 조작 느낌)
+	RideSteerInput = FMath::Clamp(MovementVector.X, -1.0f, 1.0f);
+	RideThrottleInput = FMath::Clamp(MovementVector.Y, -1.0f, 1.0f);
+}
+
+void ARPGPlayerCharacter::UpdateRidingMovement(float DeltaSeconds)
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// 1) A/D는 회전(조향)
+	const float DeltaYaw = RideSteerInput * RideTurnRateDegPerSec * DeltaSeconds;
+	AddActorWorldRotation(FRotator(0.0f, DeltaYaw, 0.0f));
+
+	// 2) W/S는 가감속
+	const float TargetSpeed = RideThrottleInput * RideMaxForwardSpeed;
+	const float InterpRate = (FMath::Abs(TargetSpeed) > FMath::Abs(RideCurrentSpeed)) ? RideAcceleration : RideBraking;
+	RideCurrentSpeed = FMath::FInterpTo(RideCurrentSpeed, TargetSpeed, DeltaSeconds, InterpRate / FMath::Max(1.0f, RideMaxForwardSpeed));
+
+	// 3) 현재 바라보는 방향으로 전진/후진
+	AddMovementInput(GetActorForwardVector(), RideCurrentSpeed / FMath::Max(1.0f, RideMaxForwardSpeed));
+}
+
+EPlayerMovementMode ARPGPlayerCharacter::ResolveMovementModeForInput() const
+{
+	if (ForcedMovementMode == EPlayerMovementMode::Fly ||
+		ForcedMovementMode == EPlayerMovementMode::Swimming ||
+		ForcedMovementMode == EPlayerMovementMode::Riding)
+	{
+		return ForcedMovementMode;
+	}
+
+	if (const UCharacterMovementComponent* Movement = GetCharacterMovement())
+	{
+		if (Movement->IsSwimming())
+		{
+			return EPlayerMovementMode::Swimming;
+		}
+		if (Movement->MovementMode == MOVE_Flying)
+		{
+			return EPlayerMovementMode::Fly;
+		}
+	}
+
+	return EPlayerMovementMode::Jog;
+}
+
+void ARPGPlayerCharacter::BindInputActions(class UCustomInputComponent* RPGInputComp)
+{
+}
+
 void ARPGPlayerCharacter::UpdateMovementSpeed()
 {
 	if (!GetCharacterMovement()) return;
@@ -208,6 +340,11 @@ void ARPGPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	
+	if (ResolveMovementModeForInput() == EPlayerMovementMode::Riding)
+	{
+		UpdateRidingMovement(DeltaSeconds);
+	}
+	
 }
 
 void ARPGPlayerCharacter::Input_Move(const FInputActionValue& Value)
@@ -217,23 +354,22 @@ void ARPGPlayerCharacter::Input_Move(const FInputActionValue& Value)
 		return;
 	}
 	
-	FVector2D MovementVector = Value.Get<FVector2D>();
+	const FVector2D MovementVector = Value.Get<FVector2D>();
 
-	if (Controller != nullptr)
+	switch (ResolveMovementModeForInput())
 	{
-		// find out which way is forward
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// get forward vector
-		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
-		// get right vector 
-		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// add movement 
-		AddMovementInput(ForwardDirection, MovementVector.Y);
-		AddMovementInput(RightDirection, MovementVector.X);
+	case EPlayerMovementMode::Fly:
+		ApplyFlyingMovement(MovementVector);
+		break;
+	case EPlayerMovementMode::Swimming:
+		ApplySwimmingMovement(MovementVector);
+		break;
+	case EPlayerMovementMode::Riding:
+		ApplyRidingMovement(MovementVector);
+		break;
+	default:
+		ApplyGroundMovement(MovementVector);
+		break;
 	}
 }
 
@@ -340,6 +476,11 @@ void ARPGPlayerCharacter::ToggleSprint()
 
 }
 
+void ARPGPlayerCharacter::ApplyInputPreset(UDataAsset_InputConfig* NewInputConfig,
+	UInputMappingContext* NewMappingContext)
+{
+}
+
 void ARPGPlayerCharacter::SetIsAiming(bool bAiming)
 {
 	if (bIsAiming == bAiming) return;
@@ -353,6 +494,20 @@ void ARPGPlayerCharacter::SetLandRecovery(bool bState)
 	bIsLandRecovery = bState;
 	
 	UpdateRotationSettings();
+}
+
+void ARPGPlayerCharacter::SetForcedMovementMode(EPlayerMovementMode NewMode)
+{
+	ForcedMovementMode = NewMode;
+	if (ForcedMovementMode != EPlayerMovementMode::Riding)
+	{
+		RideCurrentSpeed = 0.0f;
+		RideSteerInput = 0.0f;
+		RideThrottleInput = 0.0f;
+		FlyingAscendInput = 0.0f;
+		FlyingDescendInput = 0.0f;
+		FlyingVerticalInput = 0.0f;
+	}
 }
 
 

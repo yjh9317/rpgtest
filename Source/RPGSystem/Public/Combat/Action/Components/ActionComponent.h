@@ -10,6 +10,7 @@
 class UDataAsset_ActionConfig;
 class UBaseAction;
 class ABaseCharacter;
+enum class EActionEndReason : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionExecuted, const FGameplayTag&, ActionTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionCompleted, const FGameplayTag&, ActionTag);
@@ -39,7 +40,17 @@ protected:
     // === 태그 시스템 ===
     UPROPERTY(BlueprintReadOnly, Category = "Tags")
     FGameplayTagContainer ActiveTags;
+    
 public:
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionExecuted OnActionExecutedEvent;
+
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionCompleted OnActionCompletedEvent;
+
+    UPROPERTY(BlueprintAssignable, Category = "Action|Events")
+    FOnActionInterrupted OnActionInterruptedEvent;
+    
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -84,8 +95,7 @@ public:
 protected:
     void CreateActionInstances();
     void UpdateActiveActions(float DeltaTime);
-    UFUNCTION()
-    void OnActionCompleted(UBaseAction* Action);
+    void OnActionCompleted(UBaseAction* Action, EActionEndReason EndReason);
 
 #if WITH_EDITOR
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

@@ -6,6 +6,7 @@
 #include "Combat/Action/ActionOwner.h"
 #include "GameFramework/Character.h"
 #include "Interaction/Interface/InteractorInterface.h"
+#include "Player/LocomotionEnum.h"
 #include "RPGPlayerCharacter.generated.h"
 
 class URPGSpringArmComponentBase;
@@ -55,6 +56,15 @@ protected:
 	void Input_PrimaryAction(const FInputActionValue& Value);
 	void Input_SecondaryAction(const FInputActionValue& Value);
 	void Input_AbilityAction(const FInputActionValue& Value, FGameplayTag ActionTag);
+	void Input_Ascend(const FInputActionValue& Value);
+	void Input_Descend(const FInputActionValue& Value);
+	void ApplyGroundMovement(const FVector2D& MovementVector);
+	void ApplyFlyingMovement(const FVector2D& MovementVector);
+	void ApplySwimmingMovement(const FVector2D& MovementVector);
+	void ApplyRidingMovement(const FVector2D& MovementVector);
+	void UpdateRidingMovement(float DeltaSeconds);
+	EPlayerMovementMode ResolveMovementModeForInput() const;
+	void BindInputActions(class UCustomInputComponent* RPGInputComp);
 #pragma endregion InputFunc
 	
 #pragma region Toggle
@@ -98,6 +108,42 @@ protected:
 	bool bIsTertiaryDown;
 	UPROPERTY(BlueprintReadOnly, Category = "Input")
 	bool bIsGuarding;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Mode")
+	EPlayerMovementMode ForcedMovementMode = EPlayerMovementMode::Jog;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Flying")
+	float FlyingForwardSpeedScale = 0.35f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Flying")
+	float FlyingVerticalInput = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Flying")
+	float FlyingAscendInput = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Flying")
+	float FlyingDescendInput = 0.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Riding")
+	float RideTurnRateDegPerSec = 120.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Riding")
+	float RideAcceleration = 900.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Riding")
+	float RideBraking = 1200.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Riding")
+	float RideMaxForwardSpeed = 900.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Riding")
+	float RideCurrentSpeed = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Riding")
+	float RideSteerInput = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement|Riding")
+	float RideThrottleInput = 0.0f;
 #pragma endregion StateVariable
 	
 public:
@@ -107,12 +153,17 @@ public:
 #pragma endregion InterfaceFunc
 	
 #pragma region SetFunc
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	void ApplyInputPreset(UDataAsset_InputConfig* NewInputConfig, UInputMappingContext* NewMappingContext);
+	
 	UFUNCTION(BlueprintCallable, Category = "State")
 	void SetIsAiming(bool bAiming);
 	
 	UFUNCTION(BlueprintCallable, Category = "State")
 	void SetLandRecovery(bool bState);
 	
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	void SetForcedMovementMode(EPlayerMovementMode NewMode);
 #pragma endregion SetFunc
 	
 #pragma region GetFunc
