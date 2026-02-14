@@ -225,36 +225,41 @@ int32 UInventoryCoreComponent::LootNewItem(const UItemDefinition* ItemDef, int32
 
 bool UInventoryCoreComponent::LootItemInstance(UItemInstance* InInstance, int32 Quantity)
 {
-    if (!InInstance || Quantity <= 0) return false;
-    
-    const UItemDefinition* Def = InInstance->GetItemDef();
-    if (!Def) return false;
-
-    // 1. "Main" 인벤토리 우선 시도
-    FGuid MainGuid = FindInventoryGuid(FName("Main"));
-    if (MainGuid.IsValid())
+    if (!InInstance || Quantity <= 0)
     {
-        // InsertItem_Internal은 실제로 넣은 개수를 반환함
-        int32 Added = InsertItem_Internal(MainGuid, Def, Quantity, InInstance);
-        
-        // 다 넣었으면 성공
-        if (Added == Quantity) return true;
-        
-        // 일부만 들어갔다면(가방 꽉 참 등), 남은 수량 계산 필요
-        // (복잡해지므로 여기서는 "전부 성공" 아니면 "실패"로 단순화하거나, 
-        //  남은 수량을 처리하는 루프를 돌려야 함. 스마트 루팅은 보통 루프를 돕니다.)
+        return false;
     }
 
-    // 2. 다른 인벤토리 순회 (필터 맞는 곳 찾기)
+    const UItemDefinition* Def = InInstance->GetItemDef();
+    if (!Def)
+    {
+        return false;
+    }
+
+    // Instance를 옮길 때는 "부분 삽입"을 허용하지 않는다.
+    // (런타임 상태가 있는 instance가 분할/복제되면 무결성 문제가 생길 수 있음)
+    FGuid MainGuid = FindInventoryGuid(FName("Main"));
+    if (MainGuid.IsValid() && CanInsertSpecificInstance(MainGuid, Def, Quantity))
+    {
+        return InsertItem_Internal(MainGuid, Def, Quantity, InInstance) == Quantity;
+    }
+
     for (const FInventoryEntry& Entry : InventoryList.Entries)
     {
-        if (Entry.InventoryGuid == MainGuid) continue;
+        if (Entry.InventoryGuid == MainGuid)
+        {
+            continue;
+        }
 
-        int32 Added = InsertItem_Internal(Entry.InventoryGuid, Def, Quantity, InInstance);
-        if (Added == Quantity) return true;
+        if (!CanInsertSpecificInstance(Entry.InventoryGuid, Def, Quantity))
+        {
+            continue;
+        }
+
+        return InsertItem_Internal(Entry.InventoryGuid, Def, Quantity, InInstance) == Quantity;
     }
 
-    return false; // 넣을 곳이 없음 (인벤토리 가득 참)
+    return false;
 }
 
 // =============================================================
@@ -556,6 +561,20 @@ int32 UInventoryCoreComponent::InsertItem_Internal(FGuid InventoryGuid, const UI
 {
     if (!HasInventory(InventoryGuid) || !ItemDef || Quantity <= 0) return 0;
 
+    // Specific instance는 분할 삽입을 허용하지 않음(한 슬롯에 완전히 들어갈 때만 허용)
+    if (SpecificInstance)
+    {
+        if (!IsItemStackable(ItemDef) && Quantity > 1)
+        {
+            return 0;
+        }
+
+        if (IsItemStackable(ItemDef) && Quantity > GetMaxStackSize(ItemDef))
+        {
+            return 0;
+        }
+    }
+
     // 1. 필터 체크
     if (!PassesFilter(InventoryGuid, ItemDef)) return 0;
 
@@ -711,9 +730,49 @@ bool UInventoryCoreComponent::PassesFilter(FGuid InventoryGuid, const UItemDefin
     if (!ItemDef) return false;
     const FInventoryMetaData* MetaData = GetMetaData(InventoryGuid);
     if (!MetaData) return false;
-    
+
     if (MetaData->AllowedTypes.IsEmpty()) return true;
     return ItemDef->HasAnyTag(MetaData->AllowedTypes);
+}
+
+bool UInventoryCoreComponent::CanInsertSpecificInstance(FGuid InventoryGuid, const UItemDefinition* ItemDef, int32 Quantity) const
+{
+    if (!HasInventory(InventoryGuid) || !ItemDef || Quantity <= 0)
+    {
+        return false;
+    }
+
+    if (!PassesFilter(InventoryGuid, ItemDef))
+    {
+        return false;
+    }
+
+    if (!IsItemStackable(ItemDef) && Quantity > 1)
+    {
+        return false;
+    }
+
+    if (IsItemStackable(ItemDef) && Quantity > GetMaxStackSize(ItemDef))
+    {
+        return false;
+    }
+
+    const FInventoryMetaData* MetaData = GetMetaData(InventoryGuid);
+    if (!MetaData)
+    {
+        return false;
+    }
+
+    if (MetaData->bUseWeight && WeightPolicy == EInventoryWeightPolicy::BlockOverflow)
+    {
+        const float AddWeight = GetItemWeight(ItemDef, Quantity);
+        if (MetaData->CurrentWeight + AddWeight > MetaData->MaxWeight)
+        {
+            return false;
+        }
+    }
+
+    return GetEmptySlotIndex(InventoryGuid) != -1;
 }
 
 void UInventoryCoreComponent::AddToStack(FGuid InventoryGuid, int32 SlotIndex, int32 Quantity)

@@ -174,6 +174,7 @@ protected:
     bool IsValidSlotIndex(FGuid InventoryGuid, int32 SlotIndex) const;
     void UpdateWeight(FGuid InventoryGuid);
     bool PassesFilter(FGuid InventoryGuid, const UItemDefinition* ItemDef) const;
+    bool CanInsertSpecificInstance(FGuid InventoryGuid, const UItemDefinition* ItemDef, int32 Quantity) const;
     void AddToStack(FGuid InventoryGuid, int32 SlotIndex, int32 Quantity);  
     FGuid GetGuidByName_NoLog(FName InventoryName) const;
     
