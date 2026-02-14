@@ -47,6 +47,7 @@ void UHitBoxComponent::BeginDestroy()
 	OnHitBoxDeactivated.Clear();
 	OnHitBoxHit.Clear();
 	OnHitBoxStateChanged.Clear();
+	CachedCombatComponents.Empty();
 
 	// 타이머 정리
 	if (GetWorld())
@@ -451,6 +452,32 @@ float UHitBoxComponent::CalculateFinalDamage(const FHitResult& Hit, bool& bOutWa
 	return FinalDamage;
 }
 
+UCombatComponentBase* UHitBoxComponent::GetCachedCombatComponent(AActor* HitActor)
+{
+	if (!HitActor)
+	{
+		return nullptr;
+	}
+
+	if (const TWeakObjectPtr<UCombatComponentBase>* CachedCombatComponent = CachedCombatComponents.Find(HitActor))
+	{
+		if (CachedCombatComponent->IsValid())
+		{
+			return CachedCombatComponent->Get();
+		}
+
+		CachedCombatComponents.Remove(HitActor);
+	}
+
+	if (UCombatComponentBase* CombatComp = HitActor->FindComponentByClass<UCombatComponentBase>())
+	{
+		CachedCombatComponents.Add(HitActor, CombatComp);
+		return CombatComp;
+	}
+
+	return nullptr;
+}
+
 void UHitBoxComponent::ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit, float FinalDamage, bool bWasCritical)
 {
 	if (!HitActor || !OwnerCharacter)
@@ -468,7 +495,7 @@ void UHitBoxComponent::ApplyDamageToActor(AActor* HitActor, const FHitResult& Hi
 	{
 		ActualDamage = Combatable->ReceiveDamage(DamageInfo);
 	}
-	else if (UCombatComponentBase* CombatComp = HitActor->FindComponentByClass<UCombatComponentBase>())
+	else if (UCombatComponentBase* CombatComp = GetCachedCombatComponent(HitActor))
 	{
 		ActualDamage = CombatComp->ReceiveDamage(DamageInfo);
 	}
