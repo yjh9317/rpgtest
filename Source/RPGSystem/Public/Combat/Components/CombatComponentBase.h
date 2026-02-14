@@ -10,6 +10,7 @@
 #include "CombatComponentBase.generated.h"
 
 class UStatsComponent;
+class URPGEffect;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageReceived, float, Damage, AActor*, Instigator, const FDamageInfo&, DamageInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageDealt, float, Damage, AActor*, Target, const FDamageInfo&, DamageInfo);
@@ -19,6 +20,23 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreDamageApplied, const FDamageI
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnPostDamageApplied, float, AppliedDamage, const FDamageInfo&, DamageInfo, AActor*, Instigator, bool, bKilledTarget);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedFromCombat, float, OldHealth, float, NewHealth);
 
+USTRUCT(BlueprintType)
+struct FDamageEffectRule
+{
+	GENERATED_BODY()
+
+	/** Optional damage type tag match (exact or child tag match via MatchesTag). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects", meta=(Categories="Damage.Type"))
+	FGameplayTag RequiredDamageTypeTag;
+
+	/** Optional damage tag set match (if empty, ignored). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects")
+	FGameplayTagContainer RequiredDamageTags;
+
+	/** Effect applied to the damaged target when rule matches. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Effects")
+	TObjectPtr<URPGEffect> EffectToApply = nullptr;
+};
 
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -53,6 +71,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Config", meta=(Categories="Character.Stats"))
 	FGameplayTag HealthStatTag;
+
+	/** Damage tag/type -> effect application rules. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Combat|Config")
+	TArray<FDamageEffectRule> DamageEffectRules;
 
 public:
 	// === 델리게이트 ===
@@ -126,6 +148,7 @@ protected:
 	void CheckCombatTimeout(float DeltaTime);
 	UStatsComponent* GetStatsComponent() const;
 	void LogInvalidHealthStatTag(const TCHAR* CallerName) const;
+	void ApplyDamageDrivenEffects(const FDamageInfo& DamageInfo);
 
 private:
 	bool bIsInvulnerable = false;

@@ -4,6 +4,7 @@
 #include "Combat/Components/CombatComponentBase.h"
 #include "Engine/DamageEvents.h"
 #include "Status/StatsComponent.h"
+#include "Status/Effects/EffectComponent.h"
 
 UCombatComponentBase::UCombatComponentBase()
 {
@@ -119,6 +120,8 @@ float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 	{
 		EnterCombat(DamageInfo.SourceActor.Get());
 	}
+
+	ApplyDamageDrivenEffects(DamageInfo);
 
 	// 이벤트 발송
 	OnDamageReceived.Broadcast(FinalDamage, DamageInfo.SourceActor.Get(), DamageInfo);
@@ -247,6 +250,56 @@ void UCombatComponentBase::CheckCombatTimeout(float DeltaTime)
 	if (CurrentTime - LastCombatTime >= CombatTimeout)
 	{
 		LeaveCombat();
+	}
+}
+
+void UCombatComponentBase::ApplyDamageDrivenEffects(const FDamageInfo& DamageInfo)
+{
+	if (DamageEffectRules.IsEmpty())
+	{
+		return;
+	}
+
+	AActor* OwnerActor = GetOwner();
+	if (!OwnerActor)
+	{
+		return;
+	}
+
+	UEffectComponent* EffectComponent = OwnerActor->FindComponentByClass<UEffectComponent>();
+	if (!EffectComponent)
+	{
+		return;
+	}
+
+	for (const FDamageEffectRule& Rule : DamageEffectRules)
+	{
+		if (!Rule.EffectToApply)
+		{
+			continue;
+		}
+
+		if (Rule.RequiredDamageTypeTag.IsValid() &&
+			!DamageInfo.DamageTypeTag.MatchesTag(Rule.RequiredDamageTypeTag))
+		{
+			continue;
+		}
+
+		if (!Rule.RequiredDamageTags.IsEmpty() &&
+			!DamageInfo.DamageTags.HasAny(Rule.RequiredDamageTags))
+		{
+			continue;
+		}
+
+		FEffectContext EffectContext;
+		EffectContext.SourceActor = DamageInfo.SourceActor;
+		EffectContext.TargetActor = OwnerActor;
+		EffectContext.SourceLocation = DamageInfo.SourceActor.IsValid()
+			? DamageInfo.SourceActor->GetActorLocation()
+			: OwnerActor->GetActorLocation();
+		EffectContext.ApplicationTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
+
+		EffectComponent->ApplyEffect(Rule.EffectToApply, EffectContext);
 	}
 }
 
