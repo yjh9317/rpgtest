@@ -93,6 +93,9 @@ FActiveEffectHandle UEffectComponent::ApplyEffect(URPGEffect* EffectToApply, con
     // Calculate magnitude
     NewEffect.RecalculateMagnitude();
 
+    // Apply persistent stat modifiers immediately for first-time applications.
+    ApplyEffectStatModifiers(NewEffect, true);
+
     // Add to active effects
     ActiveEffects.Add(NewEffect);
 
