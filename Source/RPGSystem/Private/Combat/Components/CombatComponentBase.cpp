@@ -43,6 +43,8 @@ float UCombatComponentBase::GetCurrentHealth() const
 		{
 			return Stats->GetStatValue(HealthStatTag);
 		}
+
+		LogInvalidHealthStatTag(TEXT("GetCurrentHealth"));
 	}
 	return 100.f;
 }
@@ -55,32 +57,61 @@ float UCombatComponentBase::GetMaxHealth() const
 		{
 			return Stats->GetMaxStatValue(HealthStatTag);
 		}
+
+		LogInvalidHealthStatTag(TEXT("GetMaxHealth"));
 	}
 	return 100.f;
 }
 
 float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 {
-	if (bIsDead || bIsInvulnerable)
+	if (bIsDead)
 	{
 		return 0.f;
 	}
+
+	if (bIsInvulnerable && !DamageInfo.bBypassInvulnerability)
+	{
+		return 0.f;
+	}
+
+	OnPreDamageApplied.Broadcast(DamageInfo, DamageInfo.SourceActor.Get());
 
 	// 최종 데미지 계산
 	const float FinalDamage = CalculateFinalDamage(DamageInfo);
-
 	if (FinalDamage <= 0.f)
 	{
+		OnPostDamageApplied.Broadcast(0.f, DamageInfo, DamageInfo.SourceActor.Get(), false);
 		return 0.f;
 	}
 
-	// HP 감소
+	float OldHealth = 0.f;
+	float NewHealth = 0.f;
+	bool bHealthChanged = false;
+
 	if (UStatsComponent* Stats = GetStatsComponent())
 	{
 		if (HealthStatTag.IsValid() && Stats->HasStat(HealthStatTag))
 		{
+			OldHealth = Stats->GetStatValue(HealthStatTag);
 			Stats->ModifyStatValue(HealthStatTag, -FinalDamage);
+			NewHealth = Stats->GetStatValue(HealthStatTag);
+			bHealthChanged = true;
 		}
+		else
+		{
+			LogInvalidHealthStatTag(TEXT("ReceiveDamage"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("UCombatComponentBase::ReceiveDamage - StatsComponent not found on %s"),
+			*GetNameSafe(GetOwner()));
+	}
+
+	if (bHealthChanged)
+	{
+		OnHealthChangedFromCombat.Broadcast(OldHealth, NewHealth);
 	}
 
 	// 전투 상태 진입
@@ -95,11 +126,13 @@ float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 	// 후처리
 	PostDamageReceived(FinalDamage, DamageInfo.SourceActor.Get());
 
-	// 사망 체크
-	if (GetCurrentHealth() <= 0.f)
+	const bool bKilledTarget = GetCurrentHealth() <= 0.f;
+	if (bKilledTarget)
 	{
 		HandleDeath(DamageInfo.SourceActor.Get());
 	}
+
+	OnPostDamageApplied.Broadcast(FinalDamage, DamageInfo, DamageInfo.SourceActor.Get(), bKilledTarget);
 
 	return FinalDamage;
 }
@@ -138,6 +171,10 @@ float UCombatComponentBase::ApplyDamage(AActor* Target, const FDamageInfo& Damag
 void UCombatComponentBase::EnterCombat(AActor* Opponent)
 {
 	LastCombatTime = GetWorld()->GetTimeSeconds();
+	if (Opponent)
+	{
+		TargetActor = Opponent;
+	}
 
 	if (!bIsInCombat)
 	{
@@ -153,6 +190,8 @@ void UCombatComponentBase::LeaveCombat()
 		bIsInCombat = false;
 		OnCombatStateChanged.Broadcast(false);
 	}
+
+	TargetActor = nullptr;
 }
 
 void UCombatComponentBase::SetInvulnerable(bool bNewInvulnerable)
@@ -213,7 +252,28 @@ void UCombatComponentBase::CheckCombatTimeout(float DeltaTime)
 
 UStatsComponent* UCombatComponentBase::GetStatsComponent() const
 {
-	return CachedStatsComp.Get();
+	if (CachedStatsComp.IsValid())
+	{
+		return CachedStatsComp.Get();
+	}
+
+	if (AActor* Owner = GetOwner())
+	{
+		UCombatComponentBase* MutableThis = const_cast<UCombatComponentBase*>(this);
+		MutableThis->CachedStatsComp = Owner->FindComponentByClass<UStatsComponent>();
+		return MutableThis->CachedStatsComp.Get();
+	}
+
+	return nullptr;
+}
+
+void UCombatComponentBase::LogInvalidHealthStatTag(const TCHAR* CallerName) const
+{
+	UE_LOG(LogTemp, Warning,
+		TEXT("UCombatComponentBase::%s - Invalid or missing HealthStatTag '%s' on %s"),
+		CallerName,
+		*HealthStatTag.ToString(),
+		*GetNameSafe(GetOwner()));
 }
 
 

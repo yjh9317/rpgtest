@@ -15,6 +15,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageReceived, float, Damage,
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnDamageDealt, float, Damage, AActor*, Target, const FDamageInfo&, DamageInfo);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatDeath, AActor*, Killer);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCombatStateChanged, bool, bInCombat);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnPreDamageApplied, const FDamageInfo&, DamageInfo, AActor*, Instigator);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnPostDamageApplied, float, AppliedDamage, const FDamageInfo&, DamageInfo, AActor*, Instigator, bool, bKilledTarget);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedFromCombat, float, OldHealth, float, NewHealth);
 
 
 
@@ -65,6 +68,18 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
 	FOnCombatStateChanged OnCombatStateChanged;
 
+	/** Fired before damage is resolved. Useful for hit-stop/camera/vfx hooks. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnPreDamageApplied OnPreDamageApplied;
+
+	/** Fired after damage has been resolved. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnPostDamageApplied OnPostDamageApplied;
+
+	/** Fired when combat damage changed health value. */
+	UPROPERTY(BlueprintAssignable, Category = "Combat|Events")
+	FOnHealthChangedFromCombat OnHealthChangedFromCombat;
+
 	// === ICombatable 구현 ===
 	virtual bool IsAlive() const override { return !bIsDead; }
 	virtual float GetCurrentHealth() const override;
@@ -110,6 +125,7 @@ protected:
 
 	void CheckCombatTimeout(float DeltaTime);
 	UStatsComponent* GetStatsComponent() const;
+	void LogInvalidHealthStatTag(const TCHAR* CallerName) const;
 
 private:
 	bool bIsInvulnerable = false;
