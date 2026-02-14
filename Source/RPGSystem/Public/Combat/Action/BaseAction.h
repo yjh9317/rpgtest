@@ -19,7 +19,7 @@ enum class EActionEndReason : uint8
 };
 
 
-DECLARE_DELEGATE_OneParam(FOnActionEnded, UBaseAction*);
+DECLARE_DELEGATE_TwoParams(FOnActionEnded, UBaseAction*, EActionEndReason);
 
 UCLASS(Blueprintable,BlueprintType)
 class RPGSYSTEM_API UBaseAction : public UObject

@@ -10,6 +10,7 @@
 class UDataAsset_ActionConfig;
 class UBaseAction;
 class ABaseCharacter;
+enum class EActionEndReason : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionExecuted, const FGameplayTag&, ActionTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionCompleted, const FGameplayTag&, ActionTag);
@@ -93,8 +94,7 @@ public:
 protected:
     void CreateActionInstances();
     void UpdateActiveActions(float DeltaTime);
-    UFUNCTION()
-    void OnActionCompleted(UBaseAction* Action);
+    void OnActionCompleted(UBaseAction* Action, EActionEndReason EndReason);
 
 #if WITH_EDITOR
     virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;

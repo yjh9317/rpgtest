@@ -259,7 +259,6 @@ void UActionComponent::InterruptAction(const FGameplayTag& ActionTag)
 
     Action->Interrupt();
     ActiveActions.Remove(Action);
-    OnActionInterruptedEvent.Broadcast(ActionTag);
 
     UE_LOG(LogTemp, Log, TEXT("Interrupted action: %s"), *ActionTag.ToString());
 }
@@ -339,18 +338,25 @@ void UActionComponent::CreateActionInstances()
     }
 }
 
-void UActionComponent::OnActionCompleted(UBaseAction* Action)
+void UActionComponent::OnActionCompleted(UBaseAction* Action, EActionEndReason EndReason)
 {
     if (!Action) return;
 
     ActiveActions.Remove(Action);
-    
+
     if (Action->bWantsTick)
     {
         TickingActions.Remove(Action);
     }
 
-    OnActionCompletedEvent.Broadcast(Action->GetActionTag());
+    if (EndReason == EActionEndReason::Interrupted)
+    {
+        OnActionInterruptedEvent.Broadcast(Action->GetActionTag());
+    }
+    else
+    {
+        OnActionCompletedEvent.Broadcast(Action->GetActionTag());
+    }
 }
 
 

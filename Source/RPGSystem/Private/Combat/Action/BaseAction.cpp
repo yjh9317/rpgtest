@@ -191,7 +191,7 @@ void UBaseAction::EndAction(EActionEndReason EndReason)
 		StartCooldown();
 	}
 
-	OnActionEnded.ExecuteIfBound(this);
+	OnActionEnded.ExecuteIfBound(this, EndReason);
 }
 
 APlayerController* UBaseAction::GetOwnerController() const
