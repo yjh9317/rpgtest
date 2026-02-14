@@ -76,8 +76,7 @@ protected:
     UPROPERTY()
     TObjectPtr<UStatsComponent> StatsComponent = nullptr;
 
-    /** Runtime mapping of effect instance -> applied stat modifier tags */
-    UPROPERTY(Transient)
+    /** Runtime mapping of effect instance -> applied stat modifier tags (runtime-only, not reflected). */
     TMap<FGuid, TArray<FAppliedEffectDelta>> AppliedEffectDeltas;
 
 
