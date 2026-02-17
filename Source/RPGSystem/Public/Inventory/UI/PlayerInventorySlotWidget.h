@@ -12,7 +12,6 @@ class USizeBox;
 class UPlayerInventoryWidget;
 class UImage;
 class UTextBlock;
-class UBorder;
 class UItemDefinition;
 class UInventoryCoreComponent;
 /**
@@ -57,9 +56,6 @@ protected:
     
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UTextBlock> TextBlock_Quantity;
-    
-	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UBorder> Border_Slot;
     
 	UPROPERTY(BlueprintReadOnly, Category = "Slot")
 	int32 SlotIndex = -1;

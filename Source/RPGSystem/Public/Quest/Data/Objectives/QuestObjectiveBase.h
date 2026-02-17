@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Quest/QuestEventListener.h"
 #include "UObject/NoExportTypes.h"
 #include "QuestObjectiveBase.generated.h"
 
@@ -11,13 +12,16 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnObjectiveProgressChanged, UQuestO
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnObjectiveCompleted, UQuestObjectiveBase*, Objective);
 
 UCLASS(Abstract, Blueprintable, EditInlineNew, DefaultToInstanced, DisplayName = "Quest Objective Base")
-class RPGSYSTEM_API UQuestObjectiveBase : public UObject
+class RPGSYSTEM_API UQuestObjectiveBase : public UObject, public IQuestEventListener
 {
 	GENERATED_BODY()
 
 public:
 	UFUNCTION()
 	virtual void OnGlobalEvent(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata);
+
+	virtual bool OnQuestEvent(const FQuestEventPayload& Payload) override;
+	virtual TArray<FGameplayTag> GetListenedEventTags() const override;
 	
 public:
 	

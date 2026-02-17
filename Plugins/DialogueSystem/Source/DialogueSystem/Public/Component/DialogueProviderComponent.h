@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Dialogue.h"
+#include "DialogueRuntimeTypes.h"
 #include "DialogueProviderComponent.generated.h"
 
 UENUM(BlueprintType)
@@ -151,4 +152,23 @@ private:
      * 조건부 대화 선택
      */
     UDialogue* SelectConditionalDialogue(APlayerController* Player);
+
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue|Presentation")
+    TMap<int32, FDialogueOptionMeta> NodeOptionMetadata;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dialogue|Presentation")
+    TMap<int32, FDialogueCinematicCue> NodeCinematicCues;
+
+    UFUNCTION(BlueprintPure, Category = "Dialogue|Presentation")
+    bool GetOptionMetadata(int32 NodeId, FDialogueOptionMeta& OutMeta) const;
+
+    UFUNCTION(BlueprintPure, Category = "Dialogue|Presentation")
+    bool GetCinematicCue(int32 NodeId, FDialogueCinematicCue& OutCue) const;
+
+    UFUNCTION(BlueprintPure, Category = "Dialogue|Presentation")
+    FText ResolveSpeakerName() const;
+
+    UFUNCTION(BlueprintPure, Category = "Dialogue|Presentation")
+    UTexture2D* ResolveSpeakerPortrait() const;
 };

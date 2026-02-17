@@ -4,11 +4,81 @@
 #include "Interaction/InteractableComponent.h"
 
 #include "EnhancedInputSubsystems.h"
+#include "Event/GlobalEventHandler.h"
+#include "GameplayTagAssetInterface.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
 #include "RPGSystemCollisionChannels.h"
+#include "RPGSystemGameplayTags.h"
 #include "Components/WidgetComponent.h"
 #include "Interaction/Interface/InteractableInterface.h"
 #include "Interaction/Interface/InteractorInterface.h"
 #include "Interaction/UI/InteractionPromptWidget.h"
+#include "Quest/Components/QuestManagerComponent.h"
+
+namespace
+{
+	UQuestManagerComponent* ResolveQuestManagerFromInteractor(AActor* Interactor)
+	{
+		if (!Interactor)
+		{
+			return nullptr;
+		}
+
+		if (UQuestManagerComponent* QuestManager = Interactor->FindComponentByClass<UQuestManagerComponent>())
+		{
+			return QuestManager;
+		}
+
+		if (const APawn* Pawn = Cast<APawn>(Interactor))
+		{
+			if (AController* Controller = Pawn->GetController())
+			{
+				if (UQuestManagerComponent* QuestManager = Controller->FindComponentByClass<UQuestManagerComponent>())
+				{
+					return QuestManager;
+				}
+			}
+		}
+		else if (const AController* Controller = Cast<AController>(Interactor))
+		{
+			if (APawn* ControlledPawn = Controller->GetPawn())
+			{
+				if (UQuestManagerComponent* QuestManager = ControlledPawn->FindComponentByClass<UQuestManagerComponent>())
+				{
+					return QuestManager;
+				}
+			}
+		}
+
+		return nullptr;
+	}
+
+	FGameplayTag ResolveInteractionTag(AActor* OwnerActor, const FGameplayTag& ConfiguredTag)
+	{
+		if (ConfiguredTag.IsValid())
+		{
+			return ConfiguredTag;
+		}
+
+		if (const IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(OwnerActor))
+		{
+			FGameplayTagContainer OwnedTags;
+			TagInterface->GetOwnedGameplayTags(OwnedTags);
+			for (const FGameplayTag& OwnedTag : OwnedTags)
+			{
+				return OwnedTag;
+			}
+		}
+
+		if (OwnerActor && OwnerActor->Tags.Num() > 0)
+		{
+			return FGameplayTag::RequestGameplayTag(OwnerActor->Tags[0], false);
+		}
+
+		return FGameplayTag();
+	}
+}
 
 // Sets default values for this component's properties
 UInteractableComponent::UInteractableComponent(const FObjectInitializer& ObjectInitializer)
@@ -115,6 +185,24 @@ void UInteractableComponent::OnInteraction(AActor* Interactor)
 	if (InteractableOwner)
 	{
 		InteractableOwner->Interaction(CurrentInteractor);
+	}
+
+	const FGameplayTag InteractionSuccessTag = RPGGameplayTags::Event_Interaction_Success.GetTag();
+	if (InteractionSuccessTag.IsValid() && ResolveQuestManagerFromInteractor(CurrentInteractor))
+	{
+		if (UGlobalEventHandler* EventHandler = UGlobalEventHandler::Get(this))
+		{
+			TArray<FString> Metadata;
+			Metadata.Add(FString::Printf(TEXT("EventTag=%s"), *InteractionSuccessTag.ToString()));
+
+			const FGameplayTag InteractTag = ResolveInteractionTag(OwnerActor, QuestInteractionTag);
+			if (InteractTag.IsValid())
+			{
+				Metadata.Add(FString::Printf(TEXT("InteractTag=%s"), *InteractTag.ToString()));
+			}
+
+			EventHandler->CallGlobalEventByGameplayTag(this, InteractionSuccessTag, OwnerActor, Metadata);
+		}
 	}
 	
 	RemoveInteractionByResponse();

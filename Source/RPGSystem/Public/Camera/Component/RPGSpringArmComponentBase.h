@@ -14,6 +14,12 @@ UCLASS()
 class RPGSYSTEM_API URPGSpringArmComponentBase : public USpringArmComponent
 {
 	GENERATED_BODY()
+public:
+	void SetCameraCollisionSettings(const FCameraCollisionSettings& InCameraCollisionSettings)
+	{
+		CameraCollisionSettings = InCameraCollisionSettings;
+	}
+
 protected:
 	virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 	virtual void UpdateDesiredArmLocation(bool bDoTrace, bool bDoLocationLag, bool bDoRotationLag, float DeltaTime) override;

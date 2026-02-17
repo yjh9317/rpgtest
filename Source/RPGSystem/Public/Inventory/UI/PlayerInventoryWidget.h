@@ -35,8 +35,8 @@ protected:
 
 	void OnInventoryRefresh(FGuid InventoryGuid);
 	void OnSlotChanged(FGuid InventoryGuid, int32 SlotIndex);
-	void OnItemAddedToInventory(FGuid InventoryGuid, int32 SlotIndex, TSubclassOf<UItemDefinition> ItemDefClass);
-	void OnItemRemovedFromInventory(FGuid InventoryGuid, int32 SlotIndex, TSubclassOf<UItemDefinition> ItemDefClass);
+	void OnItemAddedToInventory(FGuid InventoryGuid, int32 SlotIndex, const UItemDefinition* ItemDef);
+	void OnItemRemovedFromInventory(FGuid InventoryGuid, int32 SlotIndex, const UItemDefinition* ItemDef);
 	void OnWeightUpdated(FGuid InventoryGuid, float CurrentWeight);
 
 

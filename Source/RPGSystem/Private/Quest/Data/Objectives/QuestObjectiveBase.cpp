@@ -32,3 +32,14 @@ void UQuestObjectiveBase::FinishObjective()
 void UQuestObjectiveBase::OnGlobalEvent(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata)
 {
 }
+
+bool UQuestObjectiveBase::OnQuestEvent(const FQuestEventPayload& Payload)
+{
+	OnGlobalEvent(nullptr, Payload.Target, Payload.Metadata);
+	return bIsCompleted;
+}
+
+TArray<FGameplayTag> UQuestObjectiveBase::GetListenedEventTags() const
+{
+	return {};
+}

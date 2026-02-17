@@ -42,13 +42,12 @@ void UHitBoxComponent::BeginPlay()
 
 void UHitBoxComponent::BeginDestroy()
 {
-	// 델리게이트 정리
 	OnHitBoxActivated.Clear();
 	OnHitBoxDeactivated.Clear();
 	OnHitBoxHit.Clear();
 	OnHitBoxStateChanged.Clear();
-
-	// 타이머 정리
+	CachedCombatComponents.Empty();
+	
 	if (GetWorld())
 	{
 		FTimerManager& TimerManager = GetWorld()->GetTimerManager();
@@ -491,6 +490,32 @@ void UHitBoxComponent::ApplyDamageToActor(AActor* HitActor, const FHitResult& Hi
 	{
 		// TODO: target stun interface/component integration
 	}
+}
+
+UCombatComponentBase* UHitBoxComponent::GetCachedCombatComponent(AActor* HitActor)
+{	
+	if (!HitActor)
+	{
+		return nullptr;
+	}
+
+	if (const TWeakObjectPtr<UCombatComponentBase>* CachedCombatComponent = CachedCombatComponents.Find(HitActor))
+	{
+		if (CachedCombatComponent->IsValid())
+		{
+			return CachedCombatComponent->Get();
+		}
+
+		CachedCombatComponents.Remove(HitActor);
+	}
+
+	if (UCombatComponentBase* CombatComp = HitActor->FindComponentByClass<UCombatComponentBase>())
+	{
+		CachedCombatComponents.Add(HitActor, CombatComp);
+		return CombatComp;
+	}
+
+	return nullptr;
 }
 
 #pragma endregion

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
 #include "Dialogue.h"
+#include "DialogueRuntimeTypes.h"
 #include "DialogueControllerInterface.generated.h"
 
 UINTERFACE(MinimalAPI, Blueprintable)
@@ -89,4 +90,8 @@ public:
     /** 대화 스킵 가능 여부 */
     UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Dialogue")
     bool CanSkipDialogue() const;
+
+    /** 대화 중 노드별 카메라 큐 적용 */
+    UFUNCTION(BlueprintNativeEvent, BlueprintCallable, Category = "Dialogue")
+    void ApplyDialogueCinematicCue(const FDialogueCinematicCue& Cue, AActor* NPCActor);
 };

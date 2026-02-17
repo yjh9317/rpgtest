@@ -11,57 +11,57 @@ class UDialogueUserWidget;
  * 
  */
 UCLASS()
-class DIALOGUESYSTEM_API UDialogueReplyWidget : public UUserWidget
+class DIALOGUESYSTEMPRESENTATION_API UDialogueReplyWidget : public UUserWidget
 {
 	GENERATED_BODY()
 public:
-    /** 메인 버튼 (전체 영역) */
+    /** 메인 버튼 (?�체 ?�역) */
     UPROPERTY(meta = (BindWidget))
     class UButton* ReplyButton;
     
-    /** 버튼 내부 컨테이너 */
+    /** 버튼 ?��? 컨테?�너 */
     UPROPERTY(meta = (BindWidget))
     class UHorizontalBox* ReplyContentBox;
     
-    /** 선택지 번호 */
+    /** ?�택지 번호 */
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* OptionNumberText;
     
-    /** 대화 텍스트 */
+    /** ?�???�스??*/
     UPROPERTY(meta = (BindWidget))
     class UTextBlock* ReplyText;
     
-    /** 조건 아이콘 (선택적) */
+    /** 조건 ?�이�?(?�택?? */
     UPROPERTY(meta = (BindWidget))
     class UImage* ConditionIcon;
     
-    /** 스킬 체크 아이콘 (선택적, BG3 스타일) */
+    /** ?�킬 체크 ?�이�?(?�택?? BG3 ?��??? */
     UPROPERTY(meta = (BindWidget))
     class UImage* SkillCheckIcon;
     
-    // ========== 버튼 스타일 ==========
+    // ========== 버튼 ?��???==========
     
-    /** 일반 상태 색상 */
+    /** ?�반 ?�태 ?�상 */
     UPROPERTY(EditDefaultsOnly, Category = "Style")
     FLinearColor NormalColor = FLinearColor(0.02f, 0.02f, 0.03f, 0.95f);
     
-    /** 호버 상태 색상 */
+    /** ?�버 ?�태 ?�상 */
     UPROPERTY(EditDefaultsOnly, Category = "Style")
     FLinearColor HoveredColor = FLinearColor(0.1f, 0.1f, 0.15f, 0.95f);
     
-    /** 선택됨 상태 색상 */
+    /** ?�택???�태 ?�상 */
     UPROPERTY(EditDefaultsOnly, Category = "Style")
     FLinearColor SelectedColor = FLinearColor(0.15f, 0.15f, 0.2f, 0.95f);
     
-    /** 텍스트 일반 색상 */
+    /** ?�스???�반 ?�상 */
     UPROPERTY(EditDefaultsOnly, Category = "Style")
     FLinearColor TextNormalColor = FLinearColor(0.8f, 0.8f, 0.8f, 1.0f);
     
-    /** 텍스트 호버 색상 */
+    /** ?�스???�버 ?�상 */
     UPROPERTY(EditDefaultsOnly, Category = "Style")
     FLinearColor TextHoveredColor = FLinearColor(1.0f, 1.0f, 1.0f, 1.0f);
     
-    // ========== 메서드 ==========
+    // ========== 메서??==========
     
     virtual void NativeConstruct() override;
     
@@ -77,7 +77,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Dialogue")
     void Setup(const FText& InText, int32 InNodeId, UDialogueUserWidget* InParent, int32 OptionIndex = 0);
     
-    /** 버튼 스타일 적용 */
+    /** 버튼 ?��????�용 */
     UFUNCTION(BlueprintCallable, Category = "Style")
     void ApplyButtonStyle(bool bHovered);
 
@@ -86,3 +86,4 @@ protected:
     UDialogueUserWidget* ParentDialogueWidget;
     bool bIsHovered = false;
 };
+

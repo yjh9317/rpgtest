@@ -21,6 +21,11 @@
       "LoadingPhase": "Default"
     },
     {
+      "Name": "DialogueSystemPresentation",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    },
+    {
       "Name": "DialogueSystemEditor",
       "Type": "Editor",
       "LoadingPhase": "Default"

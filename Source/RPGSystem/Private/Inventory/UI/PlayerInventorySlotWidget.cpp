@@ -2,7 +2,6 @@
 
 
 #include "Inventory/UI/PlayerInventorySlotWidget.h"
-#include "Components/Border.h"
 #include "Components/Image.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -81,20 +80,7 @@ void UPlayerInventorySlotWidget::UpdateSlot(const FInventorySlot& NewSlot)
 			TextBlock_Quantity->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
-    
-	// 희귀도에 따른 테두리 색상
-	if (Border_Slot)
-	{
-		Border_Slot->SetVisibility(ESlateVisibility::HitTestInvisible);
-		const UItemDefinition* ItemDef = NewSlot.GetItemDefinition();
-		if (ItemDef)
-		{
-			// Rarity 태그에 따른 색상 설정
-			// FGameplayTag RarityTag; // 실제로는 ItemDef의 태그에서 찾기
-			// FLinearColor BorderColor = UInventoryFunctionLibrary::GetRarityColorFromTag(RarityTag);
-			// SlotBorder->SetBrushColor(BorderColor);
-		}
-	}
+	
 }
 
 void UPlayerInventorySlotWidget::ClearSlot()
@@ -109,11 +95,6 @@ void UPlayerInventorySlotWidget::ClearSlot()
 	if (TextBlock_Quantity)
 	{
 		TextBlock_Quantity->SetVisibility(ESlateVisibility::Collapsed);
-	}
-    
-	if (Border_Slot)
-	{
-		Border_Slot->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 

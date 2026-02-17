@@ -44,6 +44,23 @@ FInputActionValue URPGCameraTurnRateModifier::ModifyRaw_Implementation(const UEn
 		// Here we know that it's not null
 		PlayerCameraManager = PCManager;
 	}
-	return 0.f;
-	// return CurrentValue.Get<FVector>() * PlayerCameraManager->GetCameraTurnRate();
+
+	const FVector TurnRate = PlayerCameraManager->GetCameraTurnRate();
+	switch (ValueType)
+	{
+	case EInputActionValueType::Axis1D:
+		return CurrentValue.Get<float>() * TurnRate.X;
+	case EInputActionValueType::Axis2D:
+	{
+		const FVector2D Value = CurrentValue.Get<FVector2D>();
+		return FVector2D(Value.X * TurnRate.X, Value.Y * TurnRate.Y);
+	}
+	case EInputActionValueType::Axis3D:
+	{
+		const FVector Value = CurrentValue.Get<FVector>();
+		return FVector(Value.X * TurnRate.X, Value.Y * TurnRate.Y, Value.Z * TurnRate.Z);
+	}
+	default:
+		return CurrentValue;
+	}
 }

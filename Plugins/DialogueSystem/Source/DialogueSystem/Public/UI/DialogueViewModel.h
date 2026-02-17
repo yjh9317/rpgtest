@@ -1,99 +1,116 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Dialogue.h"
+#include "DialogueRuntimeTypes.h"
 #include "UObject/NoExportTypes.h"
 #include "DialogueViewModel.generated.h"
 
-USTRUCT(BlueprintType)
-struct FDialogueHistoryEntry
-{
-	GENERATED_BODY()
-        
-	UPROPERTY(BlueprintReadOnly)
-	FDialogueNode Node;
-        
-	UPROPERTY(BlueprintReadOnly)
-	bool bWasPlayerChoice;
-        
-	UPROPERTY(BlueprintReadOnly)
-	FDateTime Timestamp;
-};
+class UDialogueProviderComponent;
 
 UCLASS()
 class DIALOGUESYSTEM_API UDialogueViewModel : public UObject
 {
 	GENERATED_BODY()
+
 public:
-    
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpeakerDialogueChanged, const FDialogueNode&, Node, AActor*, SpeakerActor);
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerOptionsChanged, const TArray<FDialogueNode>&, Options);
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDialogueEnded);
-    
-    UPROPERTY(BlueprintAssignable, Category = "Dialogue")
-    FOnSpeakerDialogueChanged OnSpeakerDialogueChanged;
-    
-    UPROPERTY(BlueprintAssignable, Category = "Dialogue")
-    FOnPlayerOptionsChanged OnPlayerOptionsChanged;
-    
-    UPROPERTY(BlueprintAssignable, Category = "Dialogue")
-    FOnDialogueEnded OnDialogueEnded;
-        
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    UDialogue* CurrentDialogue;
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    FDialogueNode CurrentNode;
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    AActor* CurrentSpeaker;
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    TArray<FDialogueNode> CurrentPlayerOptions;
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    bool bIsInDialogue = false;
-    
-    
-    UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
-    TArray<FDialogueHistoryEntry> DialogueHistory;
-    
-    // ========== 메서드 ==========
-    
-    /** 대화 시작 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void StartDialogue(UDialogue* Dialogue, AActor* SpeakerActor);
-    
-    /** 대화 종료 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void EndDialogue();
-    
-    /** Speaker 노드 표시 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void ShowSpeakerNode(const FDialogueNode& Node);
-    
-    /** 플레이어 선택지 표시 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void ShowPlayerOptions(const TArray<FDialogueNode>& Options);
-    
-    /** 플레이어가 선택 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void SelectOption(int32 NodeId);
-    
-    /** 다음 노드로 진행 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void AdvanceToNode(int32 NodeId);
-    
-    /** 조건 검사된 다음 노드들 가져오기 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    TArray<FDialogueNode> GetValidNextNodes(const FDialogueNode& FromNode, APlayerController* PC);
-    
-    /** 히스토리에 추가 */
-    UFUNCTION(BlueprintCallable, Category = "Dialogue")
-    void AddToHistory(const FDialogueNode& Node, bool bWasPlayerChoice);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDialogueOpened);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnDialogueClosed, bool, bCompleted);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnSpeakerDialogueChanged, const FDialogueNode&, Node, AActor*, SpeakerActor);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerOptionsChanged, const TArray<FDialogueNode>&, Options);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDialogueEnded);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSpeakerChanged, const FDialogueSpeakerPayload&, Payload);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnRuntimeOptionsUpdated, const TArray<FDialogueRuntimeOption>&, Options);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHistoryAdded, const FDialogueHistoryEntryEx&, Entry);
+	DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnCinematicCueRequested, const FDialogueCinematicCue&, Cue);
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnDialogueOpened OnDialogueOpened;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnDialogueClosed OnDialogueClosed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnSpeakerDialogueChanged OnSpeakerDialogueChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnPlayerOptionsChanged OnPlayerOptionsChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnDialogueEnded OnDialogueEnded;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnSpeakerChanged OnSpeakerChanged;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnRuntimeOptionsUpdated OnRuntimeOptionsUpdated;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnHistoryAdded OnHistoryAdded;
+
+	UPROPERTY(BlueprintAssignable, Category = "Dialogue")
+	FOnCinematicCueRequested OnCinematicCueRequested;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	TObjectPtr<UDialogue> CurrentDialogue = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	FDialogueNode CurrentNode;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	TObjectPtr<AActor> CurrentSpeaker = nullptr;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	TArray<FDialogueNode> CurrentPlayerOptions;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	TArray<FDialogueRuntimeOption> CurrentRuntimeOptions;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	bool bIsInDialogue = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Dialogue")
+	TArray<FDialogueHistoryEntryEx> DialogueHistory;
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void StartDialogue(UDialogue* Dialogue, AActor* SpeakerActor);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void StartDialogueExtended(UDialogue* Dialogue, AActor* SpeakerActor, UDialogueProviderComponent* Provider, APlayerController* InOwningPlayer);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void EndDialogue(bool bCompleted = false);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void ShowSpeakerNode(const FDialogueNode& Node);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void ShowPlayerOptions(const TArray<FDialogueNode>& Options);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void SelectOption(int32 NodeId);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void SelectOptionByIndex(int32 OptionIndex);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void AdvanceToNode(int32 NodeId);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	TArray<FDialogueNode> GetValidNextNodes(const FDialogueNode& FromNode, APlayerController* PC);
+
+	UFUNCTION(BlueprintCallable, Category = "Dialogue")
+	void AddToHistory(const FDialogueNode& Node, bool bWasPlayerChoice);
 
 private:
-    void ProcessNode(const FDialogueNode& Node);
+	UPROPERTY()
+	TObjectPtr<UDialogueProviderComponent> CurrentProvider = nullptr;
+
+	UPROPERTY()
+	TObjectPtr<APlayerController> OwningPlayer = nullptr;
+
+	void ProcessNode(const FDialogueNode& Node);
+	void BuildRuntimeOptions(const TArray<FDialogueNode>& CandidateNodes, TArray<FDialogueRuntimeOption>& OutOptions) const;
+	bool AreNodeConditionsMet(const FDialogueNode& Node, APlayerController* PC) const;
+	void TryEmitCinematicCue(int32 NodeId) const;
 };

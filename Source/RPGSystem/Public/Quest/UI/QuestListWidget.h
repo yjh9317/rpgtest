@@ -9,10 +9,9 @@
 class UQuestEntryWidget;
 class UScrollBox;
 class URPGQuestData;
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuestSelected, URPGQuestData*, SelectedQuest);
-/**
- * 
- */
+
 UCLASS()
 class RPGSYSTEM_API UQuestListWidget : public UUserWidget
 {
@@ -24,9 +23,15 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UQuestEntryWidget> QuestEntryClass;
 
-	// 부모가 구독할 이벤트
-	FOnQuestSelected OnQuestSelected; 
+	UPROPERTY(BlueprintAssignable, Category = "Quest")
+	FOnQuestSelected OnQuestSelected;
 
-	// 데이터 받아서 목록 갱신
 	void RefreshList(const TArray<URPGQuestData*>& Quests);
+
+private:
+	UFUNCTION()
+	void HandleEntrySelected(URPGQuestData* SelectedQuest);
+
+	UPROPERTY(Transient)
+	TObjectPtr<UQuestEntryWidget> SelectedEntryWidget;
 };

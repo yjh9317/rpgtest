@@ -1,4 +1,4 @@
-﻿// Copyright Underflow Studios 2017
+// Copyright Underflow Studios 2017
 
 #pragma once
 
@@ -12,18 +12,18 @@ class UDialogueViewModel;
  * 
  */
 UCLASS()
-class DIALOGUESYSTEM_API UDialogueUserWidget : public UUserWidget
+class DIALOGUESYSTEMPRESENTATION_API UDialogueUserWidget : public UUserWidget
 {
 	GENERATED_BODY()
 	
 public:
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	class UTextBlock* Txt_CurrentDialogue;
 	
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	class UScrollBox* Scroll_DialogueHistory;
     
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	class UVerticalBox* VB_DialogueHistory;
 	
 	UPROPERTY()
@@ -59,3 +59,4 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = ( ExposeOnSpawn = true ), Category = "Dialogue UI")
 	AActor* NPCActor;
 };
+

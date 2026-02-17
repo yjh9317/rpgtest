@@ -35,15 +35,15 @@ void UInteractionComponent::UpdateInteraction()
 	// 두 가지 방식으로 상호작용 대상 탐색
 	UInteractableComponent* CameraTraceResult = FindInteractableViaTrace();
 	UInteractableComponent* ForwardTraceResult = FindInteractableViaForwardTrace();
+	UInteractableComponent* PreferredTraceResult = CameraTraceResult ? CameraTraceResult : ForwardTraceResult;
 
 	// 현재 상호작용 중인 객체가 없는 경우
 	if (!CurrentInteractable)
 	{
 		// 두 트레이스가 모두 같은 대상을 감지한 경우에만 상호작용 시작
-		if (CameraTraceResult && ForwardTraceResult && 
-			CameraTraceResult == ForwardTraceResult)
+		if (PreferredTraceResult)
 		{
-			AssignInteractionToLocal(CameraTraceResult);
+			AssignInteractionToLocal(PreferredTraceResult);
 		}
 	}
 	// 현재 상호작용 중인 객체가 있는 경우
@@ -63,10 +63,9 @@ void UInteractionComponent::UpdateInteraction()
 		RemoveInteractionFromCurrent();
 		
 		// 새로운 동일한 객체를 감지했다면 즉시 새 상호작용 시작
-		if (CameraTraceResult && ForwardTraceResult && 
-			CameraTraceResult == ForwardTraceResult)
+		if (PreferredTraceResult)
 		{
-			AssignInteractionToLocal(CameraTraceResult);
+			AssignInteractionToLocal(PreferredTraceResult);
 		}
 	}
 }
@@ -121,7 +120,7 @@ void UInteractionComponent::UpdateCurrentInteractable()
 	if(IInteractableInterface* InteractableInterface = Cast<IInteractableInterface>(CurrentInteractable->GetOwner()))
 	{
 		// 더 이상 상호작용 불가능한 경우 제거
-		if (InteractableInterface->CanBeInteractedWith())
+		if (!InteractableInterface->CanBeInteractedWith())
 		{
 			RemoveInteractionFromCurrent();
 		}

@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 #include "InteractableDefinitions.h"
 #include "InteractableComponent.generated.h"
 
@@ -163,6 +164,9 @@ public:
 	
 	UPROPERTY(EditDefaultsOnly, Category="Interactable")
 	EInteractionResponse InteractionResponse;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category="Interactable|Quest")
+	FGameplayTag QuestInteractionTag;
 
 	UPROPERTY(EditDefaultsOnly, Category="Interactable")
 	int32 InteractableValue;

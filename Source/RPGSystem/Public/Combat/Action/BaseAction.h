@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "ActionTypes.h"
 #include "GameplayTagContainer.h"
+#include "TimerManager.h"
 #include "UObject/NoExportTypes.h"
 #include "BaseAction.generated.h"
 
@@ -16,6 +17,14 @@ enum class EActionEndReason : uint8
 {
 	Completed,
 	Interrupted
+};
+
+UENUM(BlueprintType)
+enum class EActionInputPhase : uint8
+{
+	Pressed,
+	Released,
+	Held
 };
 
 DECLARE_DELEGATE_TwoParams(FOnActionEnded, UBaseAction*, EActionEndReason);
@@ -66,6 +75,24 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Conditions")
 	bool bInterruptible = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture")
+	bool bEnableGestureDetection = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture")
+	bool bAutoDisableGestureForNonPlayerControlled = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture", meta = (ClampMin = "0.01"))
+	float ShortPressThreshold = 0.25f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture", meta = (ClampMin = "0.01"))
+	float LongPressThreshold = 0.5f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture")
+	bool bEnableDoubleClick = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input|Gesture", meta = (ClampMin = "0.01"))
+	float DoubleClickThreshold = 0.3f;
 		
 	FOnActionEnded OnActionEnded;
 
@@ -82,10 +109,16 @@ protected:
 	bool bIsActive = false;
 	float ActivationTime = 0.0f;
 	float LastExecutionTime = -999.0f;
+	bool bInputPressed = false;
+	bool bLongPressTriggered = false;
+	bool bPendingSingleClick = false;
+	float InputPressedTime = -1.0f;
+	FTimerHandle SingleClickTimerHandle;
 
 public:
 	virtual void Initialize(AActor* NewActionOwner, UObject* NewSourceObject = nullptr);
 	virtual bool ProcessInput() { return false; }
+	virtual bool HandleInput(EActionInputPhase InputPhase, float InputValue = 1.0f);
 	void Execute();
     void Tick(float DeltaTime);
 	UFUNCTION(BlueprintCallable, Category = "Action")
@@ -108,6 +141,12 @@ public:
     	if (!bIsActive) return 0.0f;
     	return GetWorld()->GetTimeSeconds() - ActivationTime;
     }
+
+	UFUNCTION(BlueprintPure, Category = "Action|Input")
+	bool IsInputPressed() const { return bInputPressed; }
+
+	UFUNCTION(BlueprintPure, Category = "Action|Input")
+	float GetCurrentInputHoldTime() const;
 
     UFUNCTION(BlueprintPure, Category = "Action")
     float GetCooldownRemaining() const;
@@ -151,11 +190,43 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Action|Event")
 	void OnComplete();
 	virtual void OnComplete_Implementation() {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnInputPressedEvent(float InputValue);
+	virtual void OnInputPressedEvent_Implementation(float InputValue) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnInputHeldEvent(float HoldDuration, float InputValue);
+	virtual void OnInputHeldEvent_Implementation(float HoldDuration, float InputValue) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnInputReleasedEvent(float HoldDuration, float InputValue);
+	virtual void OnInputReleasedEvent_Implementation(float HoldDuration, float InputValue) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnShortPressEvent(float HoldDuration);
+	virtual void OnShortPressEvent_Implementation(float HoldDuration) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnLongPressEvent(float HoldDuration);
+	virtual void OnLongPressEvent_Implementation(float HoldDuration) {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnSingleClickEvent();
+	virtual void OnSingleClickEvent_Implementation() {}
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Action|Input")
+	void OnDoubleClickEvent();
+	virtual void OnDoubleClickEvent_Implementation() {}
 #pragma endregion
 	
 	virtual void StartCooldown();
     virtual bool OnHasRequiredResources() const { return true; }
 	void EndAction(EActionEndReason EndReason);
+	void TrackInputGesture(EActionInputPhase InputPhase, float InputValue);
+	void HandleSingleClickTimeout();
+	void ClearPendingSingleClick();
+	float GetWorldTimeSafe() const;
 public:
 	UObject* GetSourceObject() const { return SourceObject; }
 };

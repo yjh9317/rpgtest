@@ -4,13 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Combat/Action/BaseAction.h"
 #include "Components/ActorComponent.h"
 #include "ActionComponent.generated.h"
 
 class UDataAsset_ActionConfig;
 class UBaseAction;
 class ABaseCharacter;
-enum class EActionEndReason : uint8;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionExecuted, const FGameplayTag&, ActionTag);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnActionCompleted, const FGameplayTag&, ActionTag);
@@ -63,7 +63,9 @@ public:
     UBaseAction* GetAction(const FGameplayTag& ActionTag) const;
 
     // === Action 실행 ===
-    bool ExecuteAction(const FGameplayTag& ActionTag);
+    bool ExecuteAction(const FGameplayTag& ActionTag,
+        EActionInputPhase InputPhase = EActionInputPhase::Pressed,
+        float InputValue = 1.0f);
     bool ExecuteActionInstance(UBaseAction* Action);
     void InterruptAction(const FGameplayTag& ActionTag);
     void InterruptAllActions();

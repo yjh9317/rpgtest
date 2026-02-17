@@ -8,6 +8,7 @@
 #include "HitBoxComponent.generated.h"
 
 class ACharacter;
+class UCombatComponentBase;
 
 // 상수 정의
 namespace HitBoxConstants
@@ -282,7 +283,7 @@ private:
 	bool CanHitActor(AActor* Actor) const;
 	float CalculateFinalDamage(const FHitResult& Hit, bool& bOutWasCritical);
 	void ApplyDamageToActor(AActor* HitActor, const FHitResult& Hit, float FinalDamage, bool bWasCritical);
-	
+	UCombatComponentBase* GetCachedCombatComponent(AActor* HitActor);
 	// 이펙트
 	void PlayHitEffects(const FVector& Location, const FVector& Normal);
 	void ApplyHitStop();
@@ -372,11 +373,10 @@ public:
 	void SetDebugDraw(bool bEnabled, float Duration = -1.0f);
 
 private:
-	// === 내부 변수 ===
 	float CurrentDamageMultiplier = 1.0f;
 	TArray<TObjectPtr<AActor>> IgnoreActors;
+	TMap<TWeakObjectPtr<AActor>, TWeakObjectPtr<UCombatComponentBase>> CachedCombatComponents;
 	
-	// === 내부 함수 ===
 	void OnMultiHitTimerComplete();
 	void OnCooldownComplete();
 		

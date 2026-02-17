@@ -21,8 +21,11 @@ public:
 
 	virtual void ActivateObjective(URPGQuest* OwnerQuest) override;
 	virtual void DeactivateObjective() override;
+	virtual TArray<FGameplayTag> GetListenedEventTags() const override;
 	
 private:
 	UFUNCTION()
 	void OnLocationEntered(const FGameplayTag& LocationTag);
+
+	virtual void OnGlobalEvent(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata) override;
 };

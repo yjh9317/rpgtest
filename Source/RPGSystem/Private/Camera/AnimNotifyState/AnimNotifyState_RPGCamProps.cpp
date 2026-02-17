@@ -4,6 +4,7 @@
 #include "Camera/AnimNotifyState/AnimNotifyState_RPGCamProps.h"
 
 #include "Camera/RPGPlayerCameraManager.h"
+#include "Camera/Modifiers/RPGCameraNotifyModifiers.h"
 
 
 FLinearColor URPGFOVRequestAnimNotifyState::GetEditorColor()
@@ -26,10 +27,10 @@ void URPGFOVRequestAnimNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp
 		{
 			if (ARPGPlayerCameraManager* CameraManager = Cast<ARPGPlayerCameraManager>(PC->PlayerCameraManager))
 			{
-				// if (URPGFOVAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGFOVAnimNotifyCameraModifier>())
-				// {
-				// 	Modifier->PushFOVAnimNotifyRequest(RequestId, TargetFOV, TotalDuration, BlendInDuration, BlendInCurve, BlendOutDuration, BlendOutCurve);
-				// }
+				if (URPGFOVAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGFOVAnimNotifyCameraModifier>())
+				{
+					Modifier->PushFOVAnimNotifyRequest(RequestId, TargetFOV, TotalDuration, BlendInDuration, BlendInCurve, BlendOutDuration, BlendOutCurve);
+				}
 			}
 		}
 	}
@@ -68,18 +69,18 @@ void URPGArmOffsetRequestAnimNotifyState::NotifyBegin(USkeletalMeshComponent* Me
 		{
 			if (ARPGPlayerCameraManager* CameraManager = Cast<ARPGPlayerCameraManager>(PC->PlayerCameraManager))
 			{
-				// if (URPGArmOffsetAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGArmOffsetAnimNotifyCameraModifier>())
-				// {
-				// 	if (bModifySocketOffset)
-				// 	{
-				// 		Modifier->PushArmSocketOffsetAnimNotifyRequest(RequestId, TargetSocketOffset, TotalDuration, SocketOffsetBlendInDuration, SocketOffsetBlendInCurve, SocketOffsetBlendOutDuration, SocketOffsetBlendOutCurve);
-				// 	}
-				//
-				// 	if (bModifyTargetOffset)
-				// 	{
-				// 		Modifier->PushArmTargetOffsetAnimNotifyRequest(RequestId, TargetTargetOffset, TotalDuration, TargetOffsetBlendInDuration, TargetOffsetBlendInCurve, TargetOffsetBlendOutDuration, TargetOffsetBlendOutCurve);
-				// 	}
-				// }
+				if (URPGArmOffsetAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGArmOffsetAnimNotifyCameraModifier>())
+				{
+					if (bModifySocketOffset)
+					{
+						Modifier->PushArmSocketOffsetAnimNotifyRequest(RequestId, TargetSocketOffset, TotalDuration, SocketOffsetBlendInDuration, SocketOffsetBlendInCurve, SocketOffsetBlendOutDuration, SocketOffsetBlendOutCurve);
+					}
+
+					if (bModifyTargetOffset)
+					{
+						Modifier->PushArmTargetOffsetAnimNotifyRequest(RequestId, TargetTargetOffset, TotalDuration, TargetOffsetBlendInDuration, TargetOffsetBlendInCurve, TargetOffsetBlendOutDuration, TargetOffsetBlendOutCurve);
+					}
+				}
 			}
 		}
 	}
@@ -136,10 +137,10 @@ void URPGArmLengthRequestAnimNotifyState::NotifyBegin(USkeletalMeshComponent* Me
 		{
 			if (ARPGPlayerCameraManager* CameraManager = Cast<ARPGPlayerCameraManager>(PC->PlayerCameraManager))
 			{
-				// if (URPGArmLengthAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGArmLengthAnimNotifyCameraModifier>())
-				// {
-				// 	Modifier->PushArmLengthAnimNotifyRequest(RequestId, TargetArmLength, TotalDuration, BlendInDuration, BlendInCurve, BlendOutDuration, BlendOutCurve);
-				// }
+				if (URPGArmLengthAnimNotifyCameraModifier* Modifier = CameraManager->FindCameraModifierOfType<URPGArmLengthAnimNotifyCameraModifier>())
+				{
+					Modifier->PushArmLengthAnimNotifyRequest(RequestId, TargetArmLength, TotalDuration, BlendInDuration, BlendInCurve, BlendOutDuration, BlendOutCurve);
+				}
 			}
 		}
 	}

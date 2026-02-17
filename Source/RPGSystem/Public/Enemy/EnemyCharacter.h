@@ -2,8 +2,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/RPGCharacterBase.h"
 #include "Combat/Action/ActionOwner.h"
-#include "GameFramework/Character.h"
 #include "EnemyCharacter.generated.h"
 
 class UActionComponent;
@@ -14,7 +14,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnEnemyDamaged, float, Damage, AAc
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEnemyDeath);
 
 UCLASS()
-class RPGSYSTEM_API AEnemyCharacter : public ACharacter, public IActionOwner
+class RPGSYSTEM_API AEnemyCharacter : public ARPGCharacterBase, public IActionOwner
 {
 	GENERATED_BODY()
 

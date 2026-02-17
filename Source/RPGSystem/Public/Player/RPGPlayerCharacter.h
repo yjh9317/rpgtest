@@ -3,8 +3,8 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Character/RPGCharacterBase.h"
 #include "Combat/Action/ActionOwner.h"
-#include "GameFramework/Character.h"
 #include "Interaction/Interface/InteractorInterface.h"
 #include "Player/LocomotionEnum.h"
 #include "RPGPlayerCharacter.generated.h"
@@ -21,7 +21,7 @@ class UInputAction;
 struct FInputActionValue;
 
 UCLASS()
-class RPGSYSTEM_API ARPGPlayerCharacter : public ACharacter, public IActionOwner,public IInteractorInterface
+class RPGSYSTEM_API ARPGPlayerCharacter : public ARPGCharacterBase, public IActionOwner,public IInteractorInterface
 {
 	GENERATED_BODY()
 public:
@@ -108,6 +108,12 @@ protected:
 	bool bIsTertiaryDown;
 	UPROPERTY(BlueprintReadOnly, Category = "Input")
 	bool bIsGuarding;
+
+	UPROPERTY(Transient)
+	TMap<FGameplayTag, bool> AbilityDigitalInputStates;
+
+	UPROPERTY(Transient)
+	TMap<FGameplayTag, float> AbilityAxisInputStates;
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement|Mode")
 	EPlayerMovementMode ForcedMovementMode = EPlayerMovementMode::Jog;

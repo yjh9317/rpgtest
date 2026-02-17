@@ -44,8 +44,8 @@ void UPitchFollowModifier::UpdatePitchFollowState(FRotator LocalControlRotation,
 			                          OutFloorExists, OutFloorDistance);
 
 			if (FollowSettings.bTriggerWhenFalling && IsOwnerFalling() && LocalControlRotation.Pitch >= RPGCameraManager
-				->ViewPitchMin && !OutFloorDistance &&
-				(!OutFloorDistance || OutFloorDistance >= FollowSettings.MinDistanceFromGroundToTriggerWhenFalling))
+				->ViewPitchMin &&
+				(!OutFloorExists || OutFloorDistance >= FollowSettings.MinDistanceFromGroundToTriggerWhenFalling))
 			{
 				bCanTriggerFollow = true;
 				OutPitchFollowState = EPitchFollowState::Falling;
@@ -106,6 +106,7 @@ bool UPitchFollowModifier::ProcessControlRotation_Implementation(AActor* ViewTar
 	{
 		BlendTimer = 0.f;
 		OutDeltaRot = InDeltaRot;
+		return false;
 	}
 
 	if(!bHasRotationInput && TimeSinceRotationInput > GetTimeThreshold())

@@ -6,6 +6,9 @@
 #include "Combat/Action/Components/ActionComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
+#include "Engine/World.h"
 
 
 UBaseAction::UBaseAction(const FObjectInitializer& ObjectInitializer)
@@ -22,6 +25,26 @@ void UBaseAction::Initialize(AActor* NewActionOwner, UObject* NewSourceObject)
 {
     OwnerCharacter = Cast<ACharacter>(NewActionOwner);
     SourceObject = NewSourceObject;
+
+    if (bAutoDisableGestureForNonPlayerControlled)
+    {
+        bool bIsPlayerControlled = false;
+
+        if (const APawn* OwnerPawn = Cast<APawn>(NewActionOwner))
+        {
+            bIsPlayerControlled = OwnerPawn->IsPlayerControlled();
+        }
+        else if (const AController* OwnerController = Cast<AController>(NewActionOwner))
+        {
+            bIsPlayerControlled = OwnerController->IsPlayerController();
+        }
+
+        if (!bIsPlayerControlled)
+        {
+            bEnableGestureDetection = false;
+            bEnableDoubleClick = false;
+        }
+    }
 
     if (IActionOwner* Interface = Cast<IActionOwner>(NewActionOwner))
     {
@@ -50,6 +73,34 @@ void UBaseAction::Execute()
     OnExecute();
 }
 
+bool UBaseAction::HandleInput(EActionInputPhase InputPhase, float InputValue)
+{
+    TrackInputGesture(InputPhase, InputValue);
+
+    if (!bIsActive)
+    {
+        return false;
+    }
+
+    if (InputPhase == EActionInputPhase::Pressed)
+    {
+        return ProcessInput();
+    }
+
+    return false;
+}
+
+float UBaseAction::GetCurrentInputHoldTime() const
+{
+    if (!bInputPressed)
+    {
+        return 0.0f;
+    }
+
+    const float CurrentTime = GetWorldTimeSafe();
+    return FMath::Max(0.0f, CurrentTime - InputPressedTime);
+}
+
 void UBaseAction::Tick(float DeltaTime)
 {
     if (!bIsActive)
@@ -73,12 +124,8 @@ void UBaseAction::Complete()
     if (!bIsActive)
         return;
 
-    bIsActive = false;
-
-    RemoveGrantedTags();
-
     OnComplete();
-    // OnActionFinished.Broadcast();
+    EndAction(EActionEndReason::Completed);
 }
 
 bool UBaseAction::CanExecute() const
@@ -195,6 +242,143 @@ void UBaseAction::EndAction(EActionEndReason EndReason)
     }
 
     OnActionEnded.ExecuteIfBound(this, EndReason);
+}
+
+void UBaseAction::TrackInputGesture(EActionInputPhase InputPhase, float InputValue)
+{
+    const float CurrentTime = GetWorldTimeSafe();
+
+    if (InputPhase == EActionInputPhase::Pressed)
+    {
+        if (!bInputPressed)
+        {
+            bInputPressed = true;
+            bLongPressTriggered = false;
+            InputPressedTime = CurrentTime;
+            OnInputPressedEvent(InputValue);
+        }
+        return;
+    }
+
+    if (InputPhase == EActionInputPhase::Held)
+    {
+        if (!bInputPressed)
+        {
+            bInputPressed = true;
+            bLongPressTriggered = false;
+            InputPressedTime = CurrentTime;
+            OnInputPressedEvent(InputValue);
+        }
+
+        const float HoldDuration = FMath::Max(0.0f, CurrentTime - InputPressedTime);
+        OnInputHeldEvent(HoldDuration, InputValue);
+
+        if (bEnableGestureDetection && !bLongPressTriggered && HoldDuration >= LongPressThreshold)
+        {
+            bLongPressTriggered = true;
+            OnLongPressEvent(HoldDuration);
+        }
+        return;
+    }
+
+    if (InputPhase == EActionInputPhase::Released)
+    {
+        if (!bInputPressed)
+        {
+            return;
+        }
+
+        const float HoldDuration = FMath::Max(0.0f, CurrentTime - InputPressedTime);
+        bInputPressed = false;
+
+        OnInputReleasedEvent(HoldDuration, InputValue);
+
+        if (!bEnableGestureDetection)
+        {
+            bLongPressTriggered = false;
+            InputPressedTime = -1.0f;
+            return;
+        }
+
+        const bool bIsShortPress = HoldDuration <= ShortPressThreshold;
+        if (bIsShortPress)
+        {
+            OnShortPressEvent(HoldDuration);
+
+            if (!bEnableDoubleClick)
+            {
+                OnSingleClickEvent();
+            }
+            else if (bPendingSingleClick)
+            {
+                ClearPendingSingleClick();
+                OnDoubleClickEvent();
+            }
+            else
+            {
+                bPendingSingleClick = true;
+                if (UWorld* World = GetWorld())
+                {
+                    World->GetTimerManager().SetTimer(
+                        SingleClickTimerHandle,
+                        this,
+                        &UBaseAction::HandleSingleClickTimeout,
+                        DoubleClickThreshold,
+                        false
+                    );
+                }
+                else
+                {
+                    bPendingSingleClick = false;
+                    OnSingleClickEvent();
+                }
+            }
+        }
+        else if (!bLongPressTriggered && HoldDuration >= LongPressThreshold)
+        {
+            // If held callbacks were not received, detect long press on release as fallback.
+            OnLongPressEvent(HoldDuration);
+        }
+
+        bLongPressTriggered = false;
+        InputPressedTime = -1.0f;
+    }
+}
+
+void UBaseAction::HandleSingleClickTimeout()
+{
+    if (!bPendingSingleClick)
+    {
+        return;
+    }
+
+    bPendingSingleClick = false;
+    OnSingleClickEvent();
+}
+
+void UBaseAction::ClearPendingSingleClick()
+{
+    if (!bPendingSingleClick)
+    {
+        return;
+    }
+
+    bPendingSingleClick = false;
+
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().ClearTimer(SingleClickTimerHandle);
+    }
+}
+
+float UBaseAction::GetWorldTimeSafe() const
+{
+    if (const UWorld* World = GetWorld())
+    {
+        return World->GetTimeSeconds();
+    }
+
+    return 0.0f;
 }
 
 APlayerController* UBaseAction::GetOwnerController() const

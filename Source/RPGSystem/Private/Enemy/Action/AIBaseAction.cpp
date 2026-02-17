@@ -6,6 +6,8 @@
 UAIBaseAction::UAIBaseAction(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
+	bEnableGestureDetection = false;
+	bEnableDoubleClick = false;
 }
 
 void UAIBaseAction::Initialize(AActor* NewActionOwner, UObject* NewSourceObject)

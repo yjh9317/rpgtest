@@ -160,6 +160,8 @@ void UGlobalEventHandler::GetAllBoundObjectsToEventByGameplayTag(FGameplayTag Ev
 {
 	if (EventGameplayTag.GetTagName().IsNone())
 	{
+		Objects.Reset();
+		return;
 	}
 	GetAllBoundObjectsToEvent(OUT Objects, ListenerEventsByGameplayTag, EventGameplayTag);
 }

@@ -87,5 +87,8 @@ namespace RPGGameplayTags
      * Event Tags (이벤트 트리거용)
      * ================================================== */
     RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Montage_NextCombo);
-    RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Hit_Melee);       
+    RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Hit_Melee);
+    RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Combat_Kill);
+    RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_Interaction_Success);
+    RPGSYSTEM_API UE_DECLARE_GAMEPLAY_TAG_EXTERN(Event_World_LocationEntered);
 }

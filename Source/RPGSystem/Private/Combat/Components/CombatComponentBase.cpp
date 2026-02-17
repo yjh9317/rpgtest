@@ -3,6 +3,11 @@
 
 #include "Combat/Components/CombatComponentBase.h"
 #include "Engine/DamageEvents.h"
+#include "Event/GlobalEventHandler.h"
+#include "GameFramework/Controller.h"
+#include "GameFramework/Pawn.h"
+#include "Quest/Components/QuestManagerComponent.h"
+#include "RPGSystemGameplayTags.h"
 #include "Status/StatsComponent.h"
 #include "Status/Effects/EffectComponent.h"
 
@@ -88,6 +93,11 @@ float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 		return 0.f;
 	}
 
+	if (DamageInfo.SourceActor.IsValid() && DamageInfo.SourceActor.Get() != GetOwner())
+	{
+		EnterCombat(DamageInfo.SourceActor.Get());
+	}
+
 	// HP 감소
 	float OldHealth = 0.f;
 	float NewHealth = 0.f;
@@ -120,6 +130,7 @@ float UCombatComponentBase::ReceiveDamage(const FDamageInfo& DamageInfo)
 
 	// 이벤트 발송
 	OnDamageReceived.Broadcast(FinalDamage, DamageInfo.SourceActor.Get(), DamageInfo);
+	ApplyDamageDrivenEffects(DamageInfo);
 
 	// 후처리
 	PostDamageReceived(FinalDamage, DamageInfo.SourceActor.Get());
@@ -155,7 +166,17 @@ float UCombatComponentBase::ApplyDamage(AActor* Target, const FDamageInfo& Damag
 	// Unreal 기본 데미지 시스템
 	else
 	{
-		AppliedDamage = Target->TakeDamage(DamageInfo.BaseDamage, FDamageEvent(), nullptr, GetOwner());
+		AController* EventInstigator = nullptr;
+		if (APawn* OwnerPawn = Cast<APawn>(GetOwner()))
+		{
+			EventInstigator = OwnerPawn->GetController();
+		}
+		else if (AController* OwnerController = Cast<AController>(GetOwner()))
+		{
+			EventInstigator = OwnerController;
+		}
+
+		AppliedDamage = Target->TakeDamage(DamageInfo.BaseDamage, FDamageEvent(), EventInstigator, GetOwner());
 	}
 
 	if (AppliedDamage > 0.f)
@@ -235,6 +256,52 @@ void UCombatComponentBase::HandleDeath_Implementation(AActor* Killer)
 	LeaveCombat();
 
 	OnCombatDeath.Broadcast(Killer);
+
+	const FGameplayTag KillEventTag = RPGGameplayTags::Event_Combat_Kill.GetTag();
+	if (!KillEventTag.IsValid())
+	{
+		return;
+	}
+
+	AActor* QuestOwnerActor = Killer;
+	if (!QuestOwnerActor)
+	{
+		return;
+	}
+
+	UQuestManagerComponent* QuestManager = QuestOwnerActor->FindComponentByClass<UQuestManagerComponent>();
+	if (!QuestManager)
+	{
+		if (const APawn* KillerPawn = Cast<APawn>(QuestOwnerActor))
+		{
+			if (AController* KillerController = KillerPawn->GetController())
+			{
+				QuestManager = KillerController->FindComponentByClass<UQuestManagerComponent>();
+			}
+		}
+		else if (const AController* KillerController = Cast<AController>(QuestOwnerActor))
+		{
+			if (APawn* ControlledPawn = KillerController->GetPawn())
+			{
+				QuestManager = ControlledPawn->FindComponentByClass<UQuestManagerComponent>();
+			}
+		}
+	}
+
+	if (!QuestManager)
+	{
+		return;
+	}
+
+	if (UGlobalEventHandler* EventHandler = UGlobalEventHandler::Get(this))
+	{
+		TArray<FString> Metadata;
+		Metadata.Add(FString::Printf(TEXT("EventTag=%s"), *KillEventTag.ToString()));
+		Metadata.Add(TEXT("Amount=1"));
+		Metadata.Add(FString::Printf(TEXT("Killer=%s"), *QuestOwnerActor->GetPathName()));
+
+		EventHandler->CallGlobalEventByGameplayTag(this, KillEventTag, GetOwner(), Metadata);
+	}
 }
 
 void UCombatComponentBase::CheckCombatTimeout(float DeltaTime)

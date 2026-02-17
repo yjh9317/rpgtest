@@ -74,4 +74,7 @@ namespace RPGGameplayTags
     /* Event */
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Montage_NextCombo, "Event.Montage.NextCombo", "Trigger for Next Combo Window");
     UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Hit_Melee, "Event.Hit.Melee", "Melee Hit Event");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Combat_Kill, "Event.Combat.Kill", "Actor kill event for quest objectives");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_Interaction_Success, "Event.Interaction.Success", "Successful interaction event for quest objectives");
+    UE_DEFINE_GAMEPLAY_TAG_COMMENT(Event_World_LocationEntered, "Event.World.LocationEntered", "Location entered event for quest objectives");
 };

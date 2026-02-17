@@ -41,7 +41,17 @@ void UCustomInputComponent::BindAbilityActions(const UDataAsset_InputConfig* Inp
 	{
 		if (AbilityConfig.InputAction && AbilityConfig.ActionTag.IsValid())
 		{
-			BindAction(AbilityConfig.InputAction, AbilityConfig.TriggerEvent, Object, Func, AbilityConfig.ActionTag);
+			TArray<ETriggerEvent> TriggerEvents;
+			TriggerEvents.AddUnique(AbilityConfig.TriggerEvent);
+			TriggerEvents.AddUnique(ETriggerEvent::Started);
+			TriggerEvents.AddUnique(ETriggerEvent::Triggered);
+			TriggerEvents.AddUnique(ETriggerEvent::Completed);
+			TriggerEvents.AddUnique(ETriggerEvent::Canceled);
+
+			for (const ETriggerEvent TriggerEvent : TriggerEvents)
+			{
+				BindAction(AbilityConfig.InputAction, TriggerEvent, Object, Func, AbilityConfig.ActionTag);
+			}
 		}
 	}
 }

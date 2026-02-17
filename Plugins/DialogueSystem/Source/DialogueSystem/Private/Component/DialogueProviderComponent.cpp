@@ -158,3 +158,40 @@ void UDialogueProviderComponent::ResetDialogueState()
     bHasSpoken = false;
     DialogueCount = 0;
 }
+
+bool UDialogueProviderComponent::GetOptionMetadata(int32 NodeId, FDialogueOptionMeta& OutMeta) const
+{
+	if (const FDialogueOptionMeta* Found = NodeOptionMetadata.Find(NodeId))
+	{
+		OutMeta = *Found;
+		return true;
+	}
+
+	return false;
+}
+
+bool UDialogueProviderComponent::GetCinematicCue(int32 NodeId, FDialogueCinematicCue& OutCue) const
+{
+	if (const FDialogueCinematicCue* Found = NodeCinematicCues.Find(NodeId))
+	{
+		OutCue = *Found;
+		return true;
+	}
+
+	return false;
+}
+
+FText UDialogueProviderComponent::ResolveSpeakerName() const
+{
+	if (!NPCName.IsEmpty())
+	{
+		return NPCName;
+	}
+
+	return GetOwner() ? FText::FromString(GetOwner()->GetName()) : FText::GetEmpty();
+}
+
+UTexture2D* UDialogueProviderComponent::ResolveSpeakerPortrait() const
+{
+	return DefaultPortrait;
+}

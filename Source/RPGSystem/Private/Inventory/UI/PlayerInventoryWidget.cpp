@@ -28,9 +28,19 @@ void UPlayerInventoryWidget::NativeDestruct()
 
 void UPlayerInventoryWidget::BindDelegateFunc()
 {
+	if (!InventoryComponent)
+	{
+		return;
+	}
+
+	InventoryComponent->OnInventoryChanged.RemoveAll(this);
+	InventoryComponent->OnItemAdded.RemoveAll(this);
+	InventoryComponent->OnItemRemoved.RemoveAll(this);
+	InventoryComponent->OnWeightChanged.RemoveAll(this);
+
 	InventoryComponent->OnInventoryChanged.AddUObject(this, &UPlayerInventoryWidget::OnSlotChanged);
-	// InventoryComponent->OnItemAdded.AddUObject(this, &UPlayerInventoryWidget::OnItemAddedToInventory);
-	// InventoryComponent->OnItemRemoved.AddUObject(this, &UPlayerInventoryWidget::OnItemRemovedFromInventory);
+	InventoryComponent->OnItemAdded.AddUObject(this, &UPlayerInventoryWidget::OnItemAddedToInventory);
+	InventoryComponent->OnItemRemoved.AddUObject(this, &UPlayerInventoryWidget::OnItemRemovedFromInventory);
 	InventoryComponent->OnWeightChanged.AddUObject(this, &UPlayerInventoryWidget::OnWeightUpdated);
 }
 
@@ -139,8 +149,9 @@ void UPlayerInventoryWidget::OnSlotChanged(FGuid InventoryGuid, int32 SlotIndex)
 }
 
 void UPlayerInventoryWidget::OnItemAddedToInventory(FGuid InventoryGuid, int32 SlotIndex,
-    TSubclassOf<UItemDefinition> ItemDefClass)
+    const UItemDefinition* ItemDef)
 {
+    (void)ItemDef;
     if (InventoryGuid != CurrentInventoryGuid) return;
     
     UE_LOG(LogTemp, Log, TEXT("[PlayerInventoryWidget] Item Added to Slot %d"), SlotIndex);
@@ -156,8 +167,9 @@ void UPlayerInventoryWidget::OnItemAddedToInventory(FGuid InventoryGuid, int32 S
 }
 
 void UPlayerInventoryWidget::OnItemRemovedFromInventory(FGuid InventoryGuid, int32 SlotIndex,
-    TSubclassOf<UItemDefinition> ItemDefClass)
+    const UItemDefinition* ItemDef)
 {
+    (void)ItemDef;
     if (InventoryGuid != CurrentInventoryGuid) return;
     
     UE_LOG(LogTemp, Log, TEXT("[PlayerInventoryWidget] Item Removed from Slot %d"), SlotIndex);
@@ -174,6 +186,8 @@ void UPlayerInventoryWidget::OnItemRemovedFromInventory(FGuid InventoryGuid, int
 
 void UPlayerInventoryWidget::OnWeightUpdated(FGuid InventoryGuid, float CurrentWeight)
 {
+    (void)CurrentWeight;
+    if (InventoryGuid != CurrentInventoryGuid) return;
     // UE_LOG(LogTemp, Verbose, TEXT("[PlayerInventoryWidget] Weight Updated: %f"), CurrentWeight);
     UpdateWeightDisplay();
 }

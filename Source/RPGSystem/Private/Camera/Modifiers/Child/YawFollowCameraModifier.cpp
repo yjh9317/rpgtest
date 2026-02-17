@@ -26,7 +26,7 @@ bool UYawFollowCameraModifier::ProcessControlRotation_Implementation(AActor* Vie
                                                       FRotator InViewRotation, FRotator InLocalControlRotation,
                                                       FRotator InDeltaRot, FRotator& OutDeltaRot)
 {
-	if(!OwnerPawn || RPGCameraManager || !CanTriggerFollow(InLocalControlRotation))
+	if(!OwnerPawn || !RPGCameraManager || !CanTriggerFollow(InLocalControlRotation))
 	{
 		BlendTimer = 0.f;
 		return false;

@@ -28,7 +28,8 @@ public class RPGSystem : ModuleRules
 			"Niagara",
 			"RenderCore",
 			"RHI", 
-			"DialogueSystem"
+			"DialogueSystem",
+			"DialogueSystemPresentation"
 		});
 		
 		PrivateDependencyModuleNames.AddRange(new string[]

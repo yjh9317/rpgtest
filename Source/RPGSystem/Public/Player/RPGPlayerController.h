@@ -6,9 +6,11 @@
 #include "RPGPlayerCharacter.h"
 #include "GameFramework/PlayerController.h"
 #include "Interface/DialogueControllerInterface.h"
+#include "DialogueRuntimeTypes.h"
 #include "SaveSystem/Interface/RPGActorSaveInterface.h"
 #include "RPGPlayerController.generated.h"
 
+class URPGDialogueCameraDirectorComponent;
 class UDialogueManagerComponent;
 class UDamageFloatManagerComponent;
 class UPlayerInventoryWidget;
@@ -50,6 +52,7 @@ public:
 	virtual void SetCharacterMovementEnabled_Implementation(bool bEnabled) override;
 	virtual void AddToDialogueHistory_Implementation(const FDialogueNode& Node, bool bIsPlayerChoice) override;
 	virtual bool CanSkipDialogue_Implementation() const override;
+	virtual void ApplyDialogueCinematicCue_Implementation(const FDialogueCinematicCue& Cue, AActor* NPCActor) override;
 #pragma endregion DialogueInterface
 	
 protected:
@@ -72,14 +75,17 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input")
 	TObjectPtr<UInputAction> InventoryAction;
 	
-	UPROPERTY()
+	UPROPERTY(Transient)
 	TObjectPtr<UStatsViewModel> StatsViewModel;
 	
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UDamageFloatManagerComponent> DamageFloatManagerComponent;
 	
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UDialogueManagerComponent> DialogueManagerComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<URPGDialogueCameraDirectorComponent> DialogueCameraDirectorComponent;
 	
 #pragma region SaveInterfaceFunc
 	

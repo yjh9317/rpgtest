@@ -7,6 +7,7 @@
 #include "QuestObjective_Collect.generated.h"
 
 class UItemDefinition;
+class UInventoryCoreComponent;
 /**
  * 
  */
@@ -30,7 +31,8 @@ public:
 
 private:
 	void CheckInventory();
+	void HandleInventoryChanged(FGuid InventoryGuid, int32 SlotIndex);
 
-	UFUNCTION()
-	void OnInventoryUpdated(const UItemDefinition* Item, int32 NewCount);
+	TWeakObjectPtr<UInventoryCoreComponent> CachedInventoryComponent;
+	FDelegateHandle InventoryChangedHandle;
 };

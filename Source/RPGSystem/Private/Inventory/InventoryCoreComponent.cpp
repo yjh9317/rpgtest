@@ -6,6 +6,7 @@
 #include "Item/Data/Fragment/ItemFragment.h"
 #include "Net/UnrealNetwork.h"
 #include "Engine/DataTable.h"
+#include "Engine/ActorChannel.h"
 #include "Inventory/InventoryInitializer.h"
 
 UInventoryCoreComponent::UInventoryCoreComponent(const FObjectInitializer& ObjectInitializer)
@@ -13,12 +14,14 @@ UInventoryCoreComponent::UInventoryCoreComponent(const FObjectInitializer& Objec
 {
     PrimaryComponentTick.bCanEverTick = false;
     SetIsReplicatedByDefault(true);
+    InventoryList.OwnerComponent = this;
     InventoryInitializer = CreateDefaultSubobject<UInventoryInitializer>(TEXT("InventoryInitializer"));
 }
 
 void UInventoryCoreComponent::BeginPlay()
 {
     Super::BeginPlay();
+    InventoryList.OwnerComponent = this;
     InitializeInventory();
 }
 
@@ -26,6 +29,35 @@ void UInventoryCoreComponent::GetLifetimeReplicatedProps(TArray<FLifetimePropert
 {
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(UInventoryCoreComponent, InventoryList);
+}
+
+bool UInventoryCoreComponent::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
+{
+    bool bWroteSomething = Super::ReplicateSubobjects(Channel, Bunch, RepFlags);
+
+    for (FInventoryEntry& Entry : InventoryList.Entries)
+    {
+        for (FInventorySlot& Slot : Entry.Slots)
+        {
+            UItemInstance* ItemInstance = Slot.ItemInstance;
+            if (!ItemInstance)
+            {
+                continue;
+            }
+
+            bWroteSomething |= Channel->ReplicateSubobject(ItemInstance, *Bunch, *RepFlags);
+
+            for (const FItemFragmentEntry& FragmentEntry : ItemInstance->ItemFragments.Entries)
+            {
+                if (UItemFragment* Fragment = FragmentEntry.Fragment)
+                {
+                    bWroteSomething |= Channel->ReplicateSubobject(Fragment, *Bunch, *RepFlags);
+                }
+            }
+        }
+    }
+
+    return bWroteSomething;
 }
 
 // ========================================
@@ -348,15 +380,14 @@ bool UInventoryCoreComponent::RemoveItemByDef(FGuid InventoryGuid, const UItemDe
             {
                 RemainingToRemove -= Slot.Quantity;
                 Slot.Clear();
-                OnItemRemoved.Broadcast(InventoryGuid, i, ItemDef);
+                HandleInventoryChanged(InventoryGuid, i, EInventoryRefreshType::SingleSlot, ItemDef, false);
             }
             else
             {
                 Slot.Quantity -= AmountToRemove;
                 RemainingToRemove -= AmountToRemove;
+                HandleInventoryChanged(InventoryGuid, i, EInventoryRefreshType::SingleSlot, nullptr, false);
             }
-            
-            OnInventoryChanged.Broadcast(InventoryGuid, i);
         }
     }
     
@@ -651,6 +682,11 @@ int32 UInventoryCoreComponent::InsertItem_Internal(FGuid InventoryGuid, const UI
 void UInventoryCoreComponent::HandleInventoryChanged(FGuid InventoryGuid, int32 SlotIndex,
     EInventoryRefreshType RefreshType, const UItemDefinition* ItemDefAddedOrRemoved, bool bWasAdded)
 {
+    if (FInventoryEntry* Entry = InventoryList.FindInventoryByGuid(InventoryGuid))
+    {
+        InventoryList.MarkItemDirty(*Entry);
+    }
+
     UpdateWeight(InventoryGuid);
 
     switch (RefreshType)
@@ -780,9 +816,9 @@ void UInventoryCoreComponent::AddToStack(FGuid InventoryGuid, int32 SlotIndex, i
     FInventorySlot* Slot = GetSlot(InventoryGuid, SlotIndex);
     if (Slot && !Slot->IsEmpty())
     {
+        const UItemDefinition* ItemDef = Slot->GetItemDefinition();
         Slot->Quantity += Quantity;
-        OnInventoryChanged.Broadcast(InventoryGuid, SlotIndex);
-        UpdateWeight(InventoryGuid);
+        HandleInventoryChanged(InventoryGuid, SlotIndex, EInventoryRefreshType::SingleSlot, ItemDef, true);
     }
 }
 

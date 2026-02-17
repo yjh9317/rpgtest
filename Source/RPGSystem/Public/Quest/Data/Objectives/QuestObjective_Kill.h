@@ -27,6 +27,7 @@ public:
 	virtual void ActivateObjective(URPGQuest* OwnerQuest) override;
 	virtual void DeactivateObjective() override;
 	virtual FString GetProgressString() const override;
+	virtual TArray<FGameplayTag> GetListenedEventTags() const override;
 
 private:
 	virtual void OnGlobalEvent(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata) override;

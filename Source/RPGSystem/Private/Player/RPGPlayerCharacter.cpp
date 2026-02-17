@@ -129,11 +129,6 @@ void ARPGPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 void ARPGPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
-	if (InventoryCoreComponent)
-	{
-		InventoryCoreComponent->InitializeInventory();
-	}
 	
 	if (InteractionComponent)
 	{
@@ -146,42 +141,108 @@ void ARPGPlayerCharacter::UpdateRotationSettings()
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	if (!Movement) return;
 
-	// 1. 회전을 막아야 하는 상황인지 체크 (공중 OR 경직)
+	// 1. ???읈??筌띾맩釉????롫뮉 ?怨뱀넺?紐? 筌ｋ똾寃?(?⑤벊夷?OR 野껋럩彛?
 	bool bShouldLockRotation = Movement->IsFalling() || bIsLandRecovery;
 
 	if (bShouldLockRotation)
 	{
-		// [회전 금지]
+		// [???읈 疫뀀뜆?]
 		Movement->bUseControllerDesiredRotation = false;
 		Movement->bOrientRotationToMovement = false;
 		bUseControllerRotationYaw = false;
 	}
 	else
 	{
-		// 2. [회전 허용] 땅에 있고 움직일 수 있는 상태
+		// 2. [???읈 ??됱뒠] ??녿퓠 ??뉙???筌욊낯??????덈뮉 ?怨밴묶
        
-		// (A) 조준(Aiming) 중 -> 카메라 방향으로 회전 (Strafe)
+		// (A) 鈺곌퀣?(Aiming) 餓?-> 燁삳?李??獄쎻뫚堉??곗쨮 ???읈 (Strafe)
 		if (bIsAiming) 
 		{
 			Movement->bUseControllerDesiredRotation = true;
 			Movement->bOrientRotationToMovement = false;
-			Movement->RotationRate = FRotator(0.0f, 720.0f, 0.0f); // 조준 시 빠른 회전
+			Movement->RotationRate = FRotator(0.0f, 720.0f, 0.0f); // 鈺곌퀣? ????쥓?????읈
 		}
-		// (B) 평상시(Exploration) -> 이동 방향으로 회전 (Orient)
+		// (B) ??깃맒??Exploration) -> ??猷?獄쎻뫚堉??곗쨮 ???읈 (Orient)
 		else
 		{
 			Movement->bUseControllerDesiredRotation = false;
 			Movement->bOrientRotationToMovement = true;
-			Movement->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // 이동 시 부드러운 회전
+			Movement->RotationRate = FRotator(0.0f, 500.0f, 0.0f); // ??猷????봔??뺤쑎?????읈
 		}
 	}
 }
 
 void ARPGPlayerCharacter::Input_AbilityAction(const FInputActionValue& Value, FGameplayTag ActionTag)
 {
-	if (ActionComponent)
+	EActionInputPhase InputPhase = EActionInputPhase::Held;
+	float InputValue = 0.0f;
+	bool bShouldDispatch = false;
+	const EInputActionValueType ValueType = Value.GetValueType();
+
+	if (ValueType == EInputActionValueType::Boolean)
 	{
-		ActionComponent->ExecuteAction(ActionTag);
+		const bool bCurrent = Value.Get<bool>();
+		const bool bPrevious = AbilityDigitalInputStates.FindRef(ActionTag);
+
+		if (bCurrent && !bPrevious)
+		{
+			InputPhase = EActionInputPhase::Pressed;
+			InputValue = 1.0f;
+			bShouldDispatch = true;
+		}
+		else if (bCurrent && bPrevious)
+		{
+			InputPhase = EActionInputPhase::Held;
+			InputValue = 1.0f;
+			bShouldDispatch = true;
+		}
+		else if (!bCurrent && bPrevious)
+		{
+			InputPhase = EActionInputPhase::Released;
+			InputValue = 0.0f;
+			bShouldDispatch = true;
+		}
+
+		AbilityDigitalInputStates.Add(ActionTag, bCurrent);
+	}
+	else if (ValueType == EInputActionValueType::Axis1D)
+	{
+		const float Axis = Value.Get<float>();
+		const float PrevAxis = AbilityAxisInputStates.FindRef(ActionTag);
+		const bool bWasActive = !FMath::IsNearlyZero(PrevAxis);
+		const bool bIsActive = !FMath::IsNearlyZero(Axis);
+
+		if (bIsActive && !bWasActive)
+		{
+			InputPhase = EActionInputPhase::Pressed;
+			InputValue = Axis;
+			bShouldDispatch = true;
+		}
+		else if (bIsActive)
+		{
+			InputPhase = EActionInputPhase::Held;
+			InputValue = Axis;
+			bShouldDispatch = true;
+		}
+		else if (!bIsActive && bWasActive)
+		{
+			InputPhase = EActionInputPhase::Released;
+			InputValue = 0.0f;
+			bShouldDispatch = true;
+		}
+
+		AbilityAxisInputStates.Add(ActionTag, Axis);
+	}
+	else
+	{
+		InputPhase = EActionInputPhase::Held;
+		InputValue = 1.0f;
+		bShouldDispatch = true;
+	}
+
+	if (ActionComponent && bShouldDispatch)
+	{
+		ActionComponent->ExecuteAction(ActionTag, InputPhase, InputValue);
 	}
 }
 
@@ -235,7 +296,7 @@ void ARPGPlayerCharacter::ApplyFlyingMovement(const FVector2D& MovementVector)
 	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
-	// 비행: 기본적으로 앞으로 진행 + A/D는 좌우 이동, W/S(IA_Ascend, IA_Descend)는 상하 입력
+	// ??쑵六? 疫꿸퀡??怨몄몵嚥???롮몵嚥?筌욊쑵六?+ A/D???ル슣????猷? W/S(IA_Ascend, IA_Descend)???怨밸릭 ??낆젾
 	FlyingVerticalInput = FMath::Clamp(FlyingAscendInput - FlyingDescendInput, -1.0f, 1.0f);
 	AddMovementInput(ForwardDirection, FlyingForwardSpeedScale);
 	AddMovementInput(RightDirection, MovementVector.X);
@@ -249,7 +310,7 @@ void ARPGPlayerCharacter::ApplySwimmingMovement(const FVector2D& MovementVector)
 		return;
 	}
 
-	// 수영: 마우스(카메라) 방향 기준으로 전진/측면 이동
+	// ??륁겫: 筌띾뜆???燁삳?李?? 獄쎻뫚堉?疫꿸퀣???곗쨮 ?袁⑹춭/筌γ볝늺 ??猷?
 	const FRotator ControlRotation = Controller->GetControlRotation();
 	const FVector ForwardDirection = ControlRotation.Vector();
 	const FVector RightDirection = FRotationMatrix(ControlRotation).GetUnitAxis(EAxis::Y);
@@ -260,7 +321,7 @@ void ARPGPlayerCharacter::ApplySwimmingMovement(const FVector2D& MovementVector)
 
 void ARPGPlayerCharacter::ApplyRidingMovement(const FVector2D& MovementVector)
 {
-	// Riding은 Strafe가 아니라 조향 + 전후 속도(말 조작 느낌)
+	// Riding?? Strafe揶쎛 ?袁⑤빍??鈺곌퀬堉?+ ?袁れ뜎 ??얜즲(筌?鈺곌퀣???癒?덱)
 	RideSteerInput = FMath::Clamp(MovementVector.X, -1.0f, 1.0f);
 	RideThrottleInput = FMath::Clamp(MovementVector.Y, -1.0f, 1.0f);
 }
@@ -272,16 +333,16 @@ void ARPGPlayerCharacter::UpdateRidingMovement(float DeltaSeconds)
 		return;
 	}
 
-	// 1) A/D는 회전(조향)
+	// 1) A/D?????읈(鈺곌퀬堉?
 	const float DeltaYaw = RideSteerInput * RideTurnRateDegPerSec * DeltaSeconds;
 	AddActorWorldRotation(FRotator(0.0f, DeltaYaw, 0.0f));
 
-	// 2) W/S는 가감속
+	// 2) W/S??揶쎛揶쏅Ŋ??
 	const float TargetSpeed = RideThrottleInput * RideMaxForwardSpeed;
 	const float InterpRate = (FMath::Abs(TargetSpeed) > FMath::Abs(RideCurrentSpeed)) ? RideAcceleration : RideBraking;
 	RideCurrentSpeed = FMath::FInterpTo(RideCurrentSpeed, TargetSpeed, DeltaSeconds, InterpRate / FMath::Max(1.0f, RideMaxForwardSpeed));
 
-	// 3) 현재 바라보는 방향으로 전진/후진
+	// 3) ?袁⑹삺 獄쏅뗀?よ퉪???獄쎻뫚堉??곗쨮 ?袁⑹춭/?袁⑹춭
 	AddMovementInput(GetActorForwardVector(), RideCurrentSpeed / FMath::Max(1.0f, RideMaxForwardSpeed));
 }
 
@@ -317,22 +378,22 @@ void ARPGPlayerCharacter::UpdateMovementSpeed()
 {
 	if (!GetCharacterMovement()) return;
 
-	float TargetSpeed = 500.0f; // 기본 속도 (Jog)
+	float TargetSpeed = 500.0f; // 疫꿸퀡????얜즲 (Jog)
 
 	if (bIsAiming)
 	{
-		TargetSpeed = 250.0f; // 조준 시 느리게
+		TargetSpeed = 250.0f; // 鈺곌퀣? ???癒?봺野?
 	}
 	else if (bIsSprint)
 	{
-		TargetSpeed = 800.0f; // 달리기 속도
+		TargetSpeed = 800.0f; // ???곫묾???얜즲
 	}
 	else if (bIsWalking)
 	{
-		TargetSpeed = 200.0f; // 걷기 속도
+		TargetSpeed = 200.0f; // 椰꾨０由???얜즲
 	}
 
-	// 실제 적용
+	// ??쇱젫 ?怨몄뒠
 	GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
 }
 
@@ -403,12 +464,12 @@ void ARPGPlayerCharacter::Input_Jump(const FInputActionValue& Value)
 	
 	if (bIsSprint)
 	{
-		// 달리기 점프
+		// ???곫묾??癒곕늄
 		GetCharacterMovement()->BrakingDecelerationFalling = 0.0f;
 	}
 	else
 	{
-		// 걷기 점프
+		// 椰꾨０由??癒곕늄
 		GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
 	}
 	
@@ -423,7 +484,11 @@ void ARPGPlayerCharacter::Input_PrimaryAction(const FInputActionValue& Value)
 	
 	if (ActionComponent)
 	{
-		ActionComponent->ExecuteAction(RPGGameplayTags::Input_Action_Primary);
+		ActionComponent->ExecuteAction(
+			RPGGameplayTags::Input_Action_Primary,
+			bVal ? EActionInputPhase::Pressed : EActionInputPhase::Released,
+			bVal ? 1.0f : 0.0f
+		);
 	}
 }
 
@@ -431,29 +496,24 @@ void ARPGPlayerCharacter::Input_SecondaryAction(const FInputActionValue& Value)
 {
 	bool bVal = Value.Get<bool>();
 	UE_LOG(LogTemp, Warning, TEXT("Right Input Value: %s"), bVal ? TEXT("TRUE") : TEXT("FALSE"));
-	bIsGuarding = !bIsGuarding;
-	bool Aiming = !bIsAiming;
-	SetIsAiming(Aiming);
-	// FGameplayTag WeaponTag = GetCurrentWeaponTag(); 
-	// if (WeaponTag.MatchesTag(RPGGameplayTags::Item_Weapon_Bow))
-	// {
-	// 	// 활이면 -> 조준(Aiming)
-	// 	SetIsAiming(bPressed);
-	// }
-	// else if (WeaponTag.MatchesTag(RPGGameplayTags::Item_Weapon_Shield))
-	// {
-	// 	// 방패면 -> 방어(Guarding)
-	// 	bIsGuarding = bPressed;
-	// }
+	bIsSecondaryDown = bVal;
+	bIsGuarding = bVal;
+	SetIsAiming(bVal);
 
-	if (bVal)
+	if (!ActionComponent)
 	{
-		// [Start] 액션 시작 요청
-		ActionComponent->ExecuteAction(RPGGameplayTags::Input_Action_Secondary);
+		return;
 	}
-	else
+
+	const bool bHandled = ActionComponent->ExecuteAction(
+		RPGGameplayTags::Input_Action_Secondary,
+		bVal ? EActionInputPhase::Pressed : EActionInputPhase::Released,
+		bVal ? 1.0f : 0.0f
+	);
+
+	// Backward compatibility for legacy actions that still rely on explicit interrupt on release.
+	if (!bVal && !bHandled && ActionComponent->IsActionActive(RPGGameplayTags::Input_Action_Secondary))
 	{
-		// [Stop] 액션 중단 요청
 		ActionComponent->InterruptAction(RPGGameplayTags::Input_Action_Secondary);
 	}
 }
@@ -515,7 +575,7 @@ void ARPGPlayerCharacter::StartInteractionWithObject(UInteractableComponent* Int
 {
 	if (InteractableComponent)
 	{
-		// 입력 조건(Hold 완료 등)이 충족되었으므로 실제 상호작용 실행
+		// ??낆젾 鈺곌퀗援?Hold ?袁⑥┷ ?????겸뫗???뤿????嚥???쇱젫 ?怨뱀깈?臾믪뒠 ??쎈뻬
 		InteractableComponent->OnInteraction(this);
 	}
 }
@@ -534,6 +594,6 @@ AActor* ARPGPlayerCharacter::GetCurrentInteractableObject()
 			return TargetComp->GetOwner();
 		}
 	}
-    
+
 	return nullptr;
 }

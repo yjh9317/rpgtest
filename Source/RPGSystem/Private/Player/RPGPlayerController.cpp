@@ -7,8 +7,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "InputMappingContext.h"
 #include "Blueprint/UserWidget.h"
+#include "Component/DialogueProviderComponent.h"
 #include "Component/DialogueManagerComponent.h"
 #include "DamageFloat/DamageFloatManagerComponent.h"
+#include "Dialogue/RPGDialogueCameraDirectorComponent.h"
 #include "HUD/RPGHUDWidget.h"
 #include "Input/RPGInputFunctionLibrary.h"
 #include "Interaction/Interface/InteractableInterface.h"
@@ -23,11 +25,15 @@
 #include "SaveSystem/Subsystem/RPGSaveSubsystem.h"
 #include "Status/StatsComponent.h"
 #include "Status/StatsViewModel.h"
+#include "UI/DialogueViewModel.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 ARPGPlayerController::ARPGPlayerController()
 {
 	DamageFloatManagerComponent = CreateDefaultSubobject<UDamageFloatManagerComponent>(TEXT("DamageFloatManagerComponent"));
 	DialogueManagerComponent = CreateDefaultSubobject<UDialogueManagerComponent>(TEXT("DialogueManagerComponent"));
+	DialogueCameraDirectorComponent = CreateDefaultSubobject<URPGDialogueCameraDirectorComponent>(TEXT("DialogueCameraDirectorComponent"));
 }
 
 void ARPGPlayerController::BeginPlay()
@@ -323,77 +329,148 @@ void ARPGPlayerController::HandleLoadCompleted()
 
 void ARPGPlayerController::StartDialogue_Implementation(UDialogue* Dialogue, AActor* NPCActor)
 {
-	IDialogueControllerInterface::StartDialogue_Implementation(Dialogue, NPCActor);
+	if (!DialogueManagerComponent || !NPCActor)
+	{
+		return;
+	}
+
+	if (UDialogueProviderComponent* Provider = NPCActor->FindComponentByClass<UDialogueProviderComponent>())
+	{
+		DialogueManagerComponent->StartDialogue(Provider);
+	}
 }
 
 void ARPGPlayerController::EndDialogue_Implementation()
 {
-	IDialogueControllerInterface::EndDialogue_Implementation();
+	if (DialogueManagerComponent)
+	{
+		DialogueManagerComponent->EndDialogue(true);
+	}
 }
 
 void ARPGPlayerController::DisplayNPCDialogue_Implementation(const FDialogueNode& Node, AActor* NPCActor)
 {
-	IDialogueControllerInterface::DisplayNPCDialogue_Implementation(Node, NPCActor);
+	FaceNPC_Implementation(NPCActor);
 }
 
 void ARPGPlayerController::DisplayPlayerOptions_Implementation(const TArray<FDialogueNode>& Options)
 {
-	IDialogueControllerInterface::DisplayPlayerOptions_Implementation(Options);
 }
 
 void ARPGPlayerController::HideDialogueUI_Implementation()
 {
-	IDialogueControllerInterface::HideDialogueUI_Implementation();
 }
 
 void ARPGPlayerController::OnPlayerSelectOption_Implementation(int32 NodeId)
 {
-	IDialogueControllerInterface::OnPlayerSelectOption_Implementation(NodeId);
+	if (!DialogueManagerComponent)
+	{
+		return;
+	}
+
+	if (UDialogueViewModel* DialogueViewModel = DialogueManagerComponent->GetDialogueViewModel())
+	{
+		DialogueViewModel->SelectOption(NodeId);
+	}
 }
 
 bool ARPGPlayerController::IsInDialogue_Implementation() const
 {
-	return IDialogueControllerInterface::IsInDialogue_Implementation();
+	return DialogueManagerComponent && DialogueManagerComponent->IsInDialogue();
 }
 
 bool ARPGPlayerController::CanStartDialogue_Implementation() const
 {
-	return IDialogueControllerInterface::CanStartDialogue_Implementation();
+	return !IsInDialogue_Implementation() && GetPawn() != nullptr;
 }
 
 void ARPGPlayerController::SwitchToDialogueCamera_Implementation(AActor* NPCActor)
 {
-	IDialogueControllerInterface::SwitchToDialogueCamera_Implementation(NPCActor);
+	if (DialogueCameraDirectorComponent)
+	{
+		DialogueCameraDirectorComponent->EnterDialogueCamera(NPCActor);
+	}
 }
 
 void ARPGPlayerController::RestoreGameplayCamera_Implementation()
 {
-	IDialogueControllerInterface::RestoreGameplayCamera_Implementation();
+	if (DialogueCameraDirectorComponent)
+	{
+		DialogueCameraDirectorComponent->ExitDialogueCamera();
+	}
 }
 
 void ARPGPlayerController::SetDialogueInputMode_Implementation(bool bDialogueMode)
 {
-	IDialogueControllerInterface::SetDialogueInputMode_Implementation(bDialogueMode);
+	if (bDialogueMode)
+	{
+		FInputModeGameAndUI InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = true;
+	}
+	else
+	{
+		FInputModeGameOnly InputMode;
+		SetInputMode(InputMode);
+		bShowMouseCursor = false;
+	}
 }
 
 void ARPGPlayerController::FaceNPC_Implementation(AActor* NPCActor)
 {
-	IDialogueControllerInterface::FaceNPC_Implementation(NPCActor);
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn || !NPCActor)
+	{
+		return;
+	}
+
+	FVector ToNPC = NPCActor->GetActorLocation() - ControlledPawn->GetActorLocation();
+	ToNPC.Z = 0.f;
+	if (!ToNPC.IsNearlyZero())
+	{
+		ControlledPawn->SetActorRotation(ToNPC.Rotation());
+	}
 }
 
 void ARPGPlayerController::SetCharacterMovementEnabled_Implementation(bool bEnabled)
 {
-	IDialogueControllerInterface::SetCharacterMovementEnabled_Implementation(bEnabled);
+	ACharacter* ControlledCharacter = Cast<ACharacter>(GetPawn());
+	if (!ControlledCharacter)
+	{
+		return;
+	}
+
+	UCharacterMovementComponent* MoveComponent = ControlledCharacter->GetCharacterMovement();
+	if (!MoveComponent)
+	{
+		return;
+	}
+
+	if (bEnabled)
+	{
+		MoveComponent->SetMovementMode(MOVE_Walking);
+	}
+	else
+	{
+		MoveComponent->DisableMovement();
+	}
 }
 
 void ARPGPlayerController::AddToDialogueHistory_Implementation(const FDialogueNode& Node, bool bIsPlayerChoice)
 {
-	IDialogueControllerInterface::AddToDialogueHistory_Implementation(Node, bIsPlayerChoice);
 }
 
 bool ARPGPlayerController::CanSkipDialogue_Implementation() const
 {
-	return IDialogueControllerInterface::CanSkipDialogue_Implementation();
+	return true;
+}
+
+void ARPGPlayerController::ApplyDialogueCinematicCue_Implementation(const FDialogueCinematicCue& Cue, AActor* NPCActor)
+{
+	if (DialogueCameraDirectorComponent)
+	{
+		DialogueCameraDirectorComponent->ApplyCue(Cue, NPCActor);
+	}
 }
 
 #pragma endregion DialogueInterface

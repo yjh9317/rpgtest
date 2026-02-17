@@ -6,6 +6,7 @@
 #include "Components/WidgetComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "GameFramework/Pawn.h"
 #include "Player/RPGPlayerController.h"
 #include "Quest/Components/QuestManagerComponent.h"
 #include "Quest/UI/QuestMarkerWidget.h"
@@ -18,6 +19,54 @@ UQuestGiverComponent::UQuestGiverComponent()
 
 void UQuestGiverComponent::OnQuestInteracted(AActor* Interactor)
 {
+	if (!QuestManagerComponent)
+	{
+		return;
+	}
+
+	ARPGPlayerController* PlayerController = nullptr;
+	if (APawn* InteractorPawn = Cast<APawn>(Interactor))
+	{
+		PlayerController = Cast<ARPGPlayerController>(InteractorPawn->GetController());
+	}
+	else
+	{
+		PlayerController = Cast<ARPGPlayerController>(Interactor);
+	}
+
+	// Priority 1: turn in rewards for quests that are already valid.
+	for (const TPair<int, FQuestGiverEntry>& Entry : QuestList)
+	{
+		if (!Entry.Value.bIsQuestReceiver)
+		{
+			continue;
+		}
+
+		if (URPGQuest* Quest = QuestManagerComponent->QueryQuest(Entry.Key))
+		{
+			if (Quest->QuestState == EQuestState::Valid && QuestManagerComponent->CompleteQuestByID(Entry.Key))
+			{
+				UpdateQuestMarker();
+				return;
+			}
+		}
+	}
+
+	// Priority 2: accept the first quest that can be started.
+	for (const TPair<int, FQuestGiverEntry>& Entry : QuestList)
+	{
+		if (!Entry.Value.bIsQuestGiver)
+		{
+			continue;
+		}
+
+		if (QuestManagerComponent->AcceptQuestByID(Entry.Key, PlayerController))
+		{
+			BindFunctionsToQuestDelegates();
+			UpdateQuestMarker();
+			return;
+		}
+	}
 }
 
 void UQuestGiverComponent::BeginPlay()
@@ -177,7 +226,8 @@ void UQuestGiverComponent::UpdateQuestMarker()
            if (Data)
            {
                // [핵심 변경] bIsRequirementMet 대신 CanAcceptQuest 사용
-               if (QuestManagerComponent->CanAcceptQuest(Data, Cast<ARPGPlayerController>(QuestManagerComponent->GetOwner())))
+               ARPGPlayerController* LocalPC = Cast<ARPGPlayerController>(UGameplayStatics::GetPlayerController(this, 0));
+               if (QuestManagerComponent->CanAcceptQuest(Data, LocalPC))
                {
                    bIsAnyQuestPending = true;
                    PendingType = Data->QuestType;

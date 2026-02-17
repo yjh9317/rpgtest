@@ -2,55 +2,95 @@
 
 
 #include "Quest/Data/Objectives/QuestObjective_Collect.h"
-#include "Quest/RPGQuest.h"
-#include "Player/RPGPlayerController.h"
+
+#include "GameFramework/Pawn.h"
 #include "Inventory/InventoryCoreComponent.h"
+#include "Item/Data/ItemDefinition.h"
+#include "Quest/Components/QuestManagerComponent.h"
+#include "Quest/RPGQuest.h"
 
 void UQuestObjective_Collect::ActivateObjective(URPGQuest* OwnerQuest)
 {
 	Super::ActivateObjective(OwnerQuest);
-	
-	// 1. 이벤트 구독 (획득/소모 모두 감지해야 함)
-	// InventoryComponent->OnItemCountChanged.AddDynamic(this, &UQuestObjective_Collect::OnInventoryUpdated);
+	CurrentAmount = 0;
 
-	// 2. [중요] 시작 시점의 인벤토리 확인
+	if (!TargetItem || !OwningQuest)
+	{
+		return;
+	}
+
+	UQuestManagerComponent* Manager = Cast<UQuestManagerComponent>(OwningQuest->GetOuter());
+	AActor* ManagerOwner = Manager ? Manager->GetOwner() : nullptr;
+	APawn* PawnOwner = Cast<APawn>(ManagerOwner);
+	if (!PawnOwner)
+	{
+		return;
+	}
+
+	UInventoryCoreComponent* Inventory = PawnOwner->FindComponentByClass<UInventoryCoreComponent>();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	CachedInventoryComponent = Inventory;
+	InventoryChangedHandle = Inventory->OnInventoryChanged.AddUObject(this, &UQuestObjective_Collect::HandleInventoryChanged);
 	CheckInventory();
 }
 
 void UQuestObjective_Collect::DeactivateObjective()
 {
+	if (UInventoryCoreComponent* Inventory = CachedInventoryComponent.Get())
+	{
+		if (InventoryChangedHandle.IsValid())
+		{
+			Inventory->OnInventoryChanged.Remove(InventoryChangedHandle);
+		}
+	}
+	CachedInventoryComponent.Reset();
+	InventoryChangedHandle.Reset();
+
 	Super::DeactivateObjective();
 }
 
 void UQuestObjective_Collect::CheckInventory()
 {
-	// 플레이어 인벤토리 접근 로직
-	// APawn* Pawn = GetWorld()->GetFirstPlayerController()->GetPawn();
-	// UInventoryCoreComponent* Inventory = Pawn->FindComponentByClass<UInventoryCoreComponent>();
-	// if (Inventory)
-	// {
-	//     CurrentAmount = Inventory->GetItemCount(TargetItem);
-	//     if (CurrentAmount >= TargetAmount) FinishObjective();
-	// }
-}
-
-void UQuestObjective_Collect::OnInventoryUpdated(const UItemDefinition* Item, int32 NewCount)
-{
-	if (Item == TargetItem)
+	if (!TargetItem)
 	{
-		CurrentAmount = NewCount; // 혹은 누적 방식이라면 로직 변경
-		if (OnProgressChanged.IsBound()) OnProgressChanged.Broadcast(this);
+		return;
+	}
 
-		if (CurrentAmount >= TargetAmount)
+	UInventoryCoreComponent* Inventory = CachedInventoryComponent.Get();
+	if (!Inventory)
+	{
+		return;
+	}
+
+	int32 Total = 0;
+	for (const FGuid& Guid : Inventory->GetAllInventoryGuids())
+	{
+		Total += Inventory->CountItemByDef(Guid, TargetItem);
+	}
+
+	if (CurrentAmount != Total)
+	{
+		CurrentAmount = Total;
+		if (OnProgressChanged.IsBound())
 		{
-			FinishObjective();
-		}
-		else
-		{
-			// 아이템을 버려서 개수가 줄어들면 완료 취소 처리도 가능
-			bIsCompleted = false;
+			OnProgressChanged.Broadcast(this);
 		}
 	}
+
+	if (!bIsCompleted && CurrentAmount >= TargetAmount)
+	{
+		CurrentAmount = TargetAmount;
+		FinishObjective();
+	}
+}
+
+void UQuestObjective_Collect::HandleInventoryChanged(FGuid InventoryGuid, int32 SlotIndex)
+{
+	CheckInventory();
 }
 
 FString UQuestObjective_Collect::GetProgressString() const

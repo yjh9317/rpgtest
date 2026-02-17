@@ -3,24 +3,64 @@
 
 #include "Blueprint/DragDropOperation.h"
 #include "Components/Button.h"
-#include "Equipment/EquipmentComponent.h"
-#include "Item/Data/ItemInstance.h"
-#include "Item/Data/ItemDefinition.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Equipment/EquipmentComponent.h"
 #include "Input/Reply.h"
+#include "Item/Data/ItemDefinition.h"
+#include "Item/Data/ItemInstance.h"
 
-// 만약 드래그 드롭 오퍼레이션 클래스가 따로 있다면 include
-// #include "Inventory/UI/InventoryDragDropOperation.h" 
+namespace
+{
+	FText BuildSlotDisplayText(const FGameplayTag& InSlotTag)
+	{
+		if (!InSlotTag.IsValid())
+		{
+			return FText::GetEmpty();
+		}
+
+		const FString TagName = InSlotTag.GetTagName().ToString();
+		int32 LastDotIndex = INDEX_NONE;
+		if (!TagName.FindLastChar(TEXT('.'), LastDotIndex))
+		{
+			return FText::FromString(TagName);
+		}
+
+		const FString RawName = TagName.Mid(LastDotIndex + 1);
+		FString PrettyName;
+		PrettyName.Reserve(RawName.Len() + 4);
+
+		for (int32 Index = 0; Index < RawName.Len(); ++Index)
+		{
+			const TCHAR Current = RawName[Index];
+			const bool bInsertSpace = (Index > 0) && FChar::IsUpper(Current) && FChar::IsLower(RawName[Index - 1]);
+			if (bInsertSpace)
+			{
+				PrettyName.AppendChar(TEXT(' '));
+			}
+			PrettyName.AppendChar(Current);
+		}
+
+		return FText::FromString(PrettyName);
+	}
+}
 
 void UCharacterEquipmentSlotWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	
+
 	if (Image_Icon)
 	{
-		// 중요: Hidden이 아니라 HitTestInvisible로 해야 보이지만 클릭은 뒤(버튼)로 넘어감
 		Image_Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+
+	if (Txt_Slot)
+	{
+		if (SlotText.IsEmpty() && SlotTag.IsValid())
+		{
+			SlotText = BuildSlotDisplayText(SlotTag);
+		}
+		Txt_Slot->SetText(SlotText);
 	}
 }
 
@@ -28,54 +68,51 @@ void UCharacterEquipmentSlotWidget::InitSlot(UEquipmentComponent* InEquipComp, F
 {
 	EquipmentComp = InEquipComp;
 	SlotTag = InSlotTag;
+	SlotText = BuildSlotDisplayText(SlotTag);
+
+	if (Txt_Slot)
+	{
+		Txt_Slot->SetText(SlotText);
+	}
 }
 
 void UCharacterEquipmentSlotWidget::UpdateSlot(const UItemInstance* InItem)
 {
 	CachedItem = InItem;
 
-	if (Image_Icon)
+	if (!Image_Icon)
 	{
-		if (InItem && InItem->GetItemDef())
+		return;
+	}
+
+	if (InItem && InItem->GetItemDef())
+	{
+		const TSoftObjectPtr<UTexture2D> Icon = InItem->GetItemDef()->Icon;
+		if (!Icon.IsNull())
 		{
-			// 아이템이 있으면 아이콘 표시
-			TSoftObjectPtr<UTexture2D> Icon = InItem->GetItemDef()->Icon;
-			if (!Icon.IsNull())
-			{
-				Image_Icon->SetBrushFromSoftTexture(Icon);
-				Image_Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
-			}
-		}
-		else
-		{
-			// 아이템이 없으면 숨김 (또는 투명/기본이미지)
-			// Image_Icon->SetVisibility(ESlateVisibility::Hidden);
+			Image_Icon->SetBrushFromSoftTexture(Icon);
+			Image_Icon->SetVisibility(ESlateVisibility::HitTestInvisible);
 		}
 	}
 }
 
-
-bool UCharacterEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation)
+bool UCharacterEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent,
+	UDragDropOperation* InOperation)
 {
-	// 드래그된 객체가 인벤토리 아이템인지 확인 (프로젝트에 맞는 DragDropOperation 캐스팅 필요)
-	// UInventoryDragDropOperation* DragOp = Cast<UInventoryDragDropOperation>(InOperation);
-	
-	// 여기서는 예시로 Payload가 UItemInstance라고 가정합니다. (실제 구현에 맞춰 수정 필요)
 	UObject* Payload = InOperation ? InOperation->Payload : nullptr;
 	UItemInstance* DroppedItem = Cast<UItemInstance>(Payload);
 
 	if (EquipmentComp && DroppedItem)
 	{
-		// 장착 시도 (EquipmentComponent가 내부적으로 슬롯 확인 및 교체 처리)
 		return EquipmentComp->EquipItem(DroppedItem);
 	}
 
 	return false;
 }
 
-FReply UCharacterEquipmentSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+FReply UCharacterEquipmentSlotWidget::NativeOnMouseButtonDown(const FGeometry& InGeometry,
+	const FPointerEvent& InMouseEvent)
 {
-	// 우클릭 시 장착 해제
 	if (InMouseEvent.GetEffectingButton() == EKeys::RightMouseButton)
 	{
 		if (EquipmentComp && CachedItem)
@@ -91,14 +128,17 @@ FReply UCharacterEquipmentSlotWidget::NativeOnMouseButtonDown(const FGeometry& I
 void UCharacterEquipmentSlotWidget::SynchronizeProperties()
 {
 	Super::SynchronizeProperties();
-	
+
 	if (Txt_Slot)
 	{
+		if (SlotText.IsEmpty() && SlotTag.IsValid())
+		{
+			SlotText = BuildSlotDisplayText(SlotTag);
+		}
 		Txt_Slot->SetText(SlotText);
 	}
 }
 
 void UCharacterEquipmentSlotWidget::OnSlotButtonClicked()
 {
-	
 }

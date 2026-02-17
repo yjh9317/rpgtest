@@ -2,28 +2,39 @@
 
 
 #include "Quest/Data/Objectives/QuestObjective_Interact.h"
-// #include "Event/GlobalEventHandler.h"
+
+#include "RPGSystemGameplayTags.h"
 
 void UQuestObjective_Interact::ActivateObjective(URPGQuest* OwnerQuest)
 {
 	Super::ActivateObjective(OwnerQuest);
-	// UGlobalEventHandler::Get(this)->OnInteractionSuccess.AddDynamic(this, &UQuestObjective_Interact::OnInteracted);
+	CurrentCount = 0;
 }
 
 void UQuestObjective_Interact::DeactivateObjective()
 {
-	// UGlobalEventHandler::Get(this)->OnInteractionSuccess.RemoveDynamic(this, &UQuestObjective_Interact::OnInteracted);
 	Super::DeactivateObjective();
 }
 
 void UQuestObjective_Interact::OnInteracted(const FGameplayTag& InteractTag)
 {
-	if (bIsCompleted) return;
+	if (bIsCompleted)
+	{
+		return;
+	}
 
-	if (InteractTag.MatchesTag(TargetInteractableTag))
+	if (TargetInteractableTag.IsValid() && !InteractTag.IsValid())
+	{
+		return;
+	}
+
+	if (!TargetInteractableTag.IsValid() || InteractTag.MatchesTag(TargetInteractableTag))
 	{
 		CurrentCount++;
-		if (OnProgressChanged.IsBound()) OnProgressChanged.Broadcast(this);
+		if (OnProgressChanged.IsBound())
+		{
+			OnProgressChanged.Broadcast(this);
+		}
 
 		if (CurrentCount >= TargetCount)
 		{
@@ -35,4 +46,33 @@ void UQuestObjective_Interact::OnInteracted(const FGameplayTag& InteractTag)
 FString UQuestObjective_Interact::GetProgressString() const
 {
 	return FString::Printf(TEXT("%d / %d"), CurrentCount, TargetCount);
+}
+
+TArray<FGameplayTag> UQuestObjective_Interact::GetListenedEventTags() const
+{
+	TArray<FGameplayTag> Tags;
+	const FGameplayTag InteractionSuccessTag = RPGGameplayTags::Event_Interaction_Success.GetTag();
+	if (InteractionSuccessTag.IsValid())
+	{
+		Tags.Add(InteractionSuccessTag);
+	}
+	return Tags;
+}
+
+void UQuestObjective_Interact::OnGlobalEvent(UObject* Publisher, UObject* Payload, const TArray<FString>& Metadata)
+{
+	Super::OnGlobalEvent(Publisher, Payload, Metadata);
+
+	FGameplayTag InteractTag;
+	for (const FString& Entry : Metadata)
+	{
+		if (Entry.StartsWith(TEXT("InteractTag=")))
+		{
+			const FString TagString = Entry.RightChop(12);
+			InteractTag = FGameplayTag::RequestGameplayTag(FName(*TagString), false);
+			break;
+		}
+	}
+
+	OnInteracted(InteractTag);
 }

@@ -10,6 +10,9 @@
 class UItemDefinition;
 class UItemInstance;
 class APlayerController;
+class UActorChannel;
+class FOutBunch;
+struct FReplicationFlags;
 
 UENUM(BlueprintType)
 enum class EInventoryRefreshType : uint8
@@ -44,6 +47,7 @@ public:
 
     virtual void BeginPlay() override;
     virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+    virtual bool ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags) override;
   
     UFUNCTION(Server,Reliable)
     void ServerMoveItemToSlot(FGuid SourceGuid, int32 SourceIdx, FGuid DestGuid, int32 DestIdx);

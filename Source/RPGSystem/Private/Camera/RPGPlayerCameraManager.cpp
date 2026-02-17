@@ -11,6 +11,7 @@
 #include "Camera/Data/RPGCameraDataAsset.h"
 #include "Camera/Methods/RPGFocusTargetMethod.h"
 #include "Camera/Modifiers/RPGCameraModifier.h"
+#include "Camera/Component/RPGSpringArmComponentBase.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -76,6 +77,7 @@ ARPGPlayerCameraManager::ARPGPlayerCameraManager()
 void ARPGPlayerCameraManager::InitializeFor(APlayerController* PC)
 {
 	Super::InitializeFor(PC);
+	SetupModifierReferences();
 	RefreshLevelSequences(); // TO DO, this might not work for open worlds if level sequences are loaded in runtime.
 }
 
@@ -406,6 +408,86 @@ void ARPGPlayerCameraManager::PopCameraData(URPGCameraDataAssetBase* CameraDA)
 
 void ARPGPlayerCameraManager::OnCameraDataStackChanged_Implementation(URPGCameraDataAssetBase* CameraDA, bool bBlendSpringArmProperties)
 {
+	if (!CameraDA)
+	{
+		CameraDA = DefaultCameraData;
+		if (!CameraDA)
+		{
+			return;
+		}
+	}
+
+	SetupModifierReferences();
+
+	MinArmLength = CameraDA->ArmLengthSettings.MinArmLength;
+	MaxArmLength = CameraDA->ArmLengthSettings.MaxArmLength;
+	MinFOV = CameraDA->FOVSettings.MinFOV;
+	MaxFOV = CameraDA->FOVSettings.MaxFOV;
+	ArmSocketOffset = CameraDA->ArmOffsetSettings.ArmSocketOffset;
+	ArmTargetOffset = CameraDA->ArmOffsetSettings.ArmTargetOffset;
+
+	const bool bShouldBlendProperties = bBlendSpringArmProperties && !CameraDataStack.IsEmpty();
+	const float ArmLengthBlendTime = bShouldBlendProperties ? CameraDA->ArmLengthSettings.ArmRangeBlendTime : 0.f;
+	const float FOVBlendTime = bShouldBlendProperties ? CameraDA->FOVSettings.FOVRangeBlendTime : 0.f;
+	const float ArmSocketBlendTime = bShouldBlendProperties ? CameraDA->ArmOffsetSettings.ArmSocketOffsetBlendTime : 0.f;
+	const float ArmTargetBlendTime = bShouldBlendProperties ? CameraDA->ArmOffsetSettings.ArmTargetOffsetBlendTime : 0.f;
+
+	SetArmLengthRange(
+		CameraDA->ArmLengthSettings.MinArmLength,
+		CameraDA->ArmLengthSettings.MaxArmLength,
+		ArmLengthBlendTime,
+		CameraDA->ArmLengthSettings.ArmRangeBlendCurve);
+	SetFOVRange(
+		CameraDA->FOVSettings.MinFOV,
+		CameraDA->FOVSettings.MaxFOV,
+		FOVBlendTime,
+		CameraDA->FOVSettings.FOVRangeBlendCurve);
+	SetArmSocketOffset(
+		CameraDA->ArmOffsetSettings.ArmSocketOffset,
+		ArmSocketBlendTime,
+		CameraDA->ArmOffsetSettings.ArmSocketOffsetBlendCurve);
+	SetArmTargetOffset(
+		CameraDA->ArmOffsetSettings.ArmTargetOffset,
+		ArmTargetBlendTime,
+		CameraDA->ArmOffsetSettings.ArmTargetOffsetBlendCurve);
+
+	FCameraPitchConstraintSettings PitchSettings = CameraDA->PitchConstraints;
+	FCameraYawConstraintSettings YawSettings = CameraDA->YawConstraints;
+	if (!bShouldBlendProperties)
+	{
+		PitchSettings.PitchConstraintsBlendTime = 0.f;
+		YawSettings.YawConstraintsBlendTime = 0.f;
+	}
+	SetPitchConstraints(PitchSettings);
+	SetYawConstraints(YawSettings);
+
+	SetPitchMovementFollowSettings(CameraDA->PitchFollowSettings);
+	SetYawMovementFollowSettings(CameraDA->YawFollowSettings);
+	SetCameraFocusSettings(CameraDA->FocusSettings);
+	SetPitchToArmLengthAndFOVCurves(CameraDA->PitchToArmAndFOVCurveSettings);
+	SetCameraDitheringSettings(CameraDA->DitheringSettings);
+	SetCameraLagSettings(CameraDA->ArmLagSettings);
+
+	if (CachedCollisionModifier)
+	{
+		CachedCollisionModifier->CollisionSettings = CameraDA->CollisionSettings;
+	}
+
+	if (URPGSpringArmComponentBase* RPGSpringArm = Cast<URPGSpringArmComponentBase>(CameraArm))
+	{
+		RPGSpringArm->SetCameraCollisionSettings(CameraDA->CollisionSettings);
+	}
+
+	if (!bShouldBlendProperties)
+	{
+		SetFOV(MinFOV);
+		if (CameraArm)
+		{
+			CameraArm->TargetArmLength = MinArmLength;
+			CameraArm->SocketOffset = ArmSocketOffset;
+			CameraArm->TargetOffset = ArmTargetOffset;
+		}
+	}
 }
 
 void ARPGPlayerCameraManager::ProcessViewRotation(float DeltaTime, FRotator& OutViewRotation, FRotator& OutDeltaRot)
@@ -635,6 +717,7 @@ UCameraModifier* ARPGPlayerCameraManager::AddNewCameraModifier(TSubclassOf<UCame
 			{
 				RPGAddOnModifiersList.Add(RPGAddOnModifier);
 			}
+			SetupModifierReferences();
 		}
 	}
 	return AddedModifier;
@@ -672,7 +755,9 @@ bool ARPGPlayerCameraManager::RemoveCameraModifier(UCameraModifier* ModifierToRe
 			}
 		}
 	}
-	return Super::RemoveCameraModifier(ModifierToRemove);
+	const bool bResult = Super::RemoveCameraModifier(ModifierToRemove);
+	SetupModifierReferences();
+	return bResult;
 }
 
 FVector ARPGPlayerCameraManager::GetOwnerVelocity() const
@@ -853,6 +938,11 @@ void ARPGPlayerCameraManager::SetupModifierReferences()
 	if (ArmOffsetModifierClass)
 	{
 		CachedArmOffsetModifier = Cast<UArmOffsetModifier>(FindCameraModifierOfClass(ArmOffsetModifierClass, true));
+	}
+
+	if (ArmLagModifierClass)
+	{
+		CachedArmLagModifier = Cast<UArmLagModifier>(FindCameraModifierOfClass(ArmLagModifierClass, true));
 	}
 
 	if (PitchToArmFOVModifierClass)
@@ -1095,6 +1185,7 @@ void ARPGPlayerCameraManager::SetCameraLagSettings(const FCameraArmLagSettings& 
 	if (CachedArmLagModifier)
 	{
 		CachedArmLagModifier->ArmLagSettings = InSettings;
+		CachedArmLagModifier->UpdateLagSettings();
 	}
 }
 
